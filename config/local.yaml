@@ -1,0 +1,6 @@
+environment: "local"
+logger:
+  minLevel: "DEBUG"
+bot:
+  key: "123"
+  timeout: 1m
