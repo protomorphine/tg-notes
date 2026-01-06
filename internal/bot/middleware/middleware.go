@@ -15,18 +15,21 @@ type middlewareCtxKey string
 
 const reqIDKey middlewareCtxKey = "reqID"
 
+func GetReqID(ctx context.Context) uuid.UUID {
+	entry := ctx.Value(reqIDKey)
+
+	if reqID, ok := entry.(uuid.UUID); ok {
+		return reqID
+	}
+
+	return uuid.Nil
+}
+
 func NewReqID() bot.Middleware {
 	return func(next bot.HandlerFunc) bot.HandlerFunc {
-		return func(ctx context.Context, bot *bot.Bot, update *models.Update) {
-			existingID := GetReqID(ctx)
-			if existingID == uuid.Nil {
-				reqID := uuid.New()
-
-				next(context.WithValue(ctx, reqIDKey, reqID), bot, update)
-				return
-			}
-
-			next(ctx, bot, update)
+		return func(ctx context.Context, b *bot.Bot, update *models.Update) {
+			reqID := uuid.New()
+			next(context.WithValue(ctx, reqIDKey, reqID), b, update)
 		}
 	}
 }
@@ -47,17 +50,7 @@ func NewLog(logger *slog.Logger) bot.Middleware {
 			t1 := time.Now()
 			next(ctx, b, update)
 
-			entry.Info("request completed", slog.String("duration", time.Since(t1).String()),)
+			entry.Info("request completed", slog.String("duration", time.Since(t1).String()))
 		}
 	}
-}
-
-func GetReqID(ctx context.Context) uuid.UUID {
-	entry := ctx.Value(reqIDKey)
-
-	if reqID, ok := entry.(uuid.UUID); ok {
-		return reqID
-	}
-
-	return uuid.Nil
 }

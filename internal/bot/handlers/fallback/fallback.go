@@ -5,6 +5,7 @@ import (
 	"context"
 	"log/slog"
 
+	"protomorphine/tg-notes/internal/bot/middleware"
 	sl "protomorphine/tg-notes/internal/logger"
 
 	"github.com/go-telegram/bot"
@@ -18,7 +19,10 @@ please use */help* to get information about available commands
 func New(logger *slog.Logger) bot.HandlerFunc {
 	return func(ctx context.Context, b *bot.Bot, update *models.Update) {
 		const op = "bot.handlers.fallback"
-		logger := logger.With(sl.Op(op), sl.ReqID(ctx))
+		logger := logger.With(
+			sl.Op(op),
+			slog.String("reqId", middleware.GetReqID(ctx).String()),
+		)
 
 		logger.Info("got unknown command", slog.String("message", update.Message.Text))
 

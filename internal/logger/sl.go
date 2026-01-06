@@ -1,24 +1,12 @@
 // Package sl provides helper functions for "log/slog" 
 package sl
 
-import (
-	"context"
-	"log/slog"
-
-	"protomorphine/tg-notes/internal/bot/middleware"
-)
+import "log/slog"
 
 func Err(err error) slog.Attr {
 	return slog.Attr{
 		Key:   "error",
 		Value: slog.StringValue(err.Error()),
-	}
-}
-
-func ReqID(ctx context.Context) slog.Attr {
-	return slog.Attr{
-		Key:   "reqID",
-		Value: slog.StringValue(middleware.GetReqID(ctx).String()),
 	}
 }
 

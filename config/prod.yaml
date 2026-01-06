@@ -1,0 +1,5 @@
+environment: "prod"
+logger:
+  minLevel: "INFO"
+bot:
+  initTimeout: 5s
