@@ -14,8 +14,8 @@ type Config struct {
 }
 
 type BotConfig struct {
-	Key     string        `yaml:"key" env-required:"true"`
-	Timeout time.Duration `yaml:"timeout" env-default:"1m"`
+	Key         string        `yaml:"key" env-required:"true"`
+	InitTimeout time.Duration `yaml:"initTimeout" env-default:"1m"`
 }
 
 type LoggerConfig struct {
