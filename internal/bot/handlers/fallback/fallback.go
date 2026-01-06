@@ -30,6 +30,10 @@ func New(logger *slog.Logger) bot.HandlerFunc {
 			ChatID:    update.Message.Chat.ID,
 			Text:      text,
 			ParseMode: models.ParseModeMarkdown,
+			ReplyParameters: &models.ReplyParameters{
+				MessageID: update.Message.ID,
+
+			},
 		})
 		if err != nil {
 			logger.Error("error while sending message", sl.Err(err))

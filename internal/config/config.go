@@ -14,8 +14,10 @@ type Config struct {
 }
 
 type BotConfig struct {
-	Key         string        `env:"TG_API_KEY" env-required:"true"`
-	InitTimeout time.Duration `yaml:"initTimeout" env-default:"1m"`
+	Key           string        `env:"TG_API_KEY" env-required:"true"`
+	InitTimeout   time.Duration `yaml:"initTimeout" env-default:"1m"`
+	WebHookURL    string        `yaml:"webHookURL" env-required:"true"`
+	ListenAddress string        `yaml:"listenAddress" env-default:":80"`
 }
 
 type LoggerConfig struct {

@@ -6,7 +6,9 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
+	"os/signal"
 
 	"protomorphine/tg-notes/internal/bot/handlers/fallback"
 	"protomorphine/tg-notes/internal/bot/handlers/help"
@@ -56,6 +58,9 @@ func main() {
 		),
 	}
 
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	defer cancel()
+
 	b, err := bot.New(cfg.Bot.Key, opts...)
 	if err != nil {
 		logger.Error("unable to initialize bot", sl.Err(err))
@@ -63,7 +68,19 @@ func main() {
 	}
 
 	b.RegisterHandler(bot.HandlerTypeMessageText, "help", bot.MatchTypeCommand, help.New(logger))
-	b.Start(context.TODO())
+
+	b.SetWebhook(ctx, &bot.SetWebhookParams{URL: cfg.Bot.WebHookURL})
+	defer func() {
+		b.DeleteWebhook(ctx, &bot.DeleteWebhookParams{DropPendingUpdates: true})
+	}()
+
+	go func() {
+		if err := http.ListenAndServe(cfg.Bot.ListenAddress, b.WebhookHandler()); err != nil {
+			logger.Error("error occured while running http server", sl.Err(err))
+		}
+	}()
+
+	b.StartWebhook(ctx)
 }
 
 func mustParseCLIArgs() *CLIArgs {
