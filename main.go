@@ -1,13 +1,20 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
 	"os"
 
+	"protomorphine/tg-notes/internal/bot/handlers/fallback"
+	"protomorphine/tg-notes/internal/bot/handlers/help"
+	"protomorphine/tg-notes/internal/bot/middleware"
 	"protomorphine/tg-notes/internal/config"
+	sl "protomorphine/tg-notes/internal/logger"
+
+	"github.com/go-telegram/bot"
 )
 
 const (
@@ -38,7 +45,25 @@ func main() {
 	logger := configureLogger(cfg.Environment, cfg.Logger)
 	logger = logger.With(slog.String("env", cfg.Environment))
 
-	logger.Info("starting app")
+	logger.Info("starting tg-notes app")
+
+	opts := []bot.Option{
+		bot.WithDefaultHandler(fallback.New(logger)),
+		bot.WithCheckInitTimeout(cfg.Bot.InitTimeout),
+		bot.WithMiddlewares(
+			middleware.NewReqID(),
+			middleware.NewLog(logger),
+		),
+	}
+
+	b, err := bot.New(cfg.Bot.Key, opts...)
+	if err != nil {
+		logger.Error("unable to initialize bot", sl.Err(err))
+		os.Exit(1)
+	}
+
+	b.RegisterHandler(bot.HandlerTypeMessageText, "help", bot.MatchTypeCommand, help.New(logger))
+	b.Start(context.TODO())
 }
 
 func mustParseCLIArgs() *CLIArgs {
@@ -46,6 +71,7 @@ func mustParseCLIArgs() *CLIArgs {
 
 	flag.Parse()
 
+	// check if config path is not empty and file exists
 	if *configPath == "" {
 		panic(errors.New("config path shouldn't be empty"))
 	}
@@ -81,6 +107,5 @@ func configureLogger(env string, logCfg config.LoggerConfig) *slog.Logger {
 		handler = slog.NewJSONHandler(os.Stdout, handlerOptions)
 	}
 
-	logger := slog.New(handler)
-	return logger
+	return slog.New(handler)
 }
