@@ -51,17 +51,30 @@ func main() {
 	removeWebhook := setWebhook(ctx, logger, b, cfg.Bot.WebHookURL)
 	defer removeWebhook()
 
-	go func() {
-		logger.Info("starting http server for receiving webhook's", slog.String("address", cfg.HTTPServer.Addr))
+	server := &http.Server{
+		Addr: cfg.HTTPServer.Addr,
+		Handler: b.WebhookHandler(),
+	}
 
-		if err := http.ListenAndServe(cfg.HTTPServer.Addr,  b.WebhookHandler()); err != nil {
+	go func() {
+		logger.Info("starting http server for receiving webhook's", slog.String("address", server.Addr))
+
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			logger.Error("error occured while running http server", sl.Err(err))
 		}
 
 		logger.Info("http server stopped")
 	}()
 
-	b.StartWebhook(ctx)
+	go func() {
+		b.StartWebhook(ctx)
+	}()
+
+	<-ctx.Done()
+
+	if err := server.Shutdown(context.Background()); err != nil {
+		logger.Error("can't shutdown http server gracefully", sl.Err(err))
+	}
 }
 
 func mustParseAndValidateCLIArgs() *CLIArgs {
