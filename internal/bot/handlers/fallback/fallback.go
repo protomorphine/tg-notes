@@ -32,7 +32,6 @@ func New(logger *slog.Logger) bot.HandlerFunc {
 			ParseMode: models.ParseModeMarkdown,
 			ReplyParameters: &models.ReplyParameters{
 				MessageID: update.Message.ID,
-
 			},
 		})
 		if err != nil {
