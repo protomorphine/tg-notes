@@ -3,3 +3,5 @@ logger:
   minLevel: "INFO"
 bot:
   initTimeout: 5s
+httpServer:
+  addr: ":2000"

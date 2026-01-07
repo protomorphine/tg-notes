@@ -46,10 +46,21 @@ func configureLogger(env string, logCfg config.LoggerConfig) *slog.Logger {
 				AddSource:  true,
 				Level:      level,
 				TimeFormat: time.Kitchen,
+				ReplaceAttr: tintReplaceAttr,
 			})
 	default:
 		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level})
 	}
 
 	return slog.New(handler)
+}
+
+func tintReplaceAttr(_ []string, a slog.Attr) slog.Attr {
+	if a.Value.Kind() == slog.KindAny {
+		// write errors in red
+		if _, ok := a.Value.Any().(error); ok {
+			return tint.Attr(9, a)
+		}
+	}
+	return a
 }
