@@ -2,6 +2,7 @@ environment: "local"
 logger:
   minLevel: "DEBUG"
 bot:
-  webHookURL: "https://9dh8cxn0-2000.euw.devtunnels.ms/"
-  listenAddress: ":2000"
+  webHookURL: "https://fhr6kk4p-2000.euw.devtunnels.ms"
   initTimeout: 5s
+httpServer:
+  addr: ":2000"

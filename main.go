@@ -10,25 +10,11 @@ import (
 	"os"
 	"os/signal"
 
-	"protomorphine/tg-notes/internal/bot/handlers/fallback"
 	"protomorphine/tg-notes/internal/bot/handlers/help"
-	"protomorphine/tg-notes/internal/bot/middleware"
 	"protomorphine/tg-notes/internal/config"
 	sl "protomorphine/tg-notes/internal/logger"
 
 	"github.com/go-telegram/bot"
-)
-
-const (
-	// log levels
-	Debug string = "DEBUG"
-	Info  string = "INFO"
-	Warn  string = "WARN"
-	Error string = "ERROR"
-
-	// application enviroments
-	Local      string = "local"
-	Production string = "prod"
 )
 
 type CLIArgs struct {
@@ -36,7 +22,7 @@ type CLIArgs struct {
 }
 
 func main() {
-	args := mustParseCLIArgs()
+	args := mustParseAndValidateCLIArgs()
 
 	cfg, err := config.Load(args.configPath)
 	if err != nil {
@@ -49,41 +35,36 @@ func main() {
 
 	logger.Info("starting tg-notes app")
 
-	opts := []bot.Option{
-		bot.WithDefaultHandler(fallback.New(logger)),
-		bot.WithCheckInitTimeout(cfg.Bot.InitTimeout),
-		bot.WithMiddlewares(
-			middleware.NewReqID(),
-			middleware.NewLog(logger),
-		),
-	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	defer stop()
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
-	defer cancel()
-
-	b, err := bot.New(cfg.Bot.Key, opts...)
+	b, err := newBot(logger, &cfg.Bot)
 	if err != nil {
 		logger.Error("unable to initialize bot", sl.Err(err))
 		os.Exit(1)
 	}
 
+	logger.Info("successfully authorized in telegram api")
+
 	b.RegisterHandler(bot.HandlerTypeMessageText, "help", bot.MatchTypeCommand, help.New(logger))
 
-	b.SetWebhook(ctx, &bot.SetWebhookParams{URL: cfg.Bot.WebHookURL})
-	defer func() {
-		b.DeleteWebhook(ctx, &bot.DeleteWebhookParams{DropPendingUpdates: true})
-	}()
+	removeWebhook := setWebhook(ctx, logger, b, cfg.Bot.WebHookURL)
+	defer removeWebhook()
 
 	go func() {
-		if err := http.ListenAndServe(cfg.Bot.ListenAddress, b.WebhookHandler()); err != nil {
+		logger.Info("starting http server for receiving webhook's", slog.String("address", cfg.HTTPServer.Addr))
+
+		if err := http.ListenAndServe(cfg.HTTPServer.Addr,  b.WebhookHandler()); err != nil {
 			logger.Error("error occured while running http server", sl.Err(err))
 		}
+
+		logger.Info("http server stopped")
 	}()
 
 	b.StartWebhook(ctx)
 }
 
-func mustParseCLIArgs() *CLIArgs {
+func mustParseAndValidateCLIArgs() *CLIArgs {
 	configPath := flag.String("config", "", "path to config file")
 
 	flag.Parse()
@@ -100,29 +81,3 @@ func mustParseCLIArgs() *CLIArgs {
 	return &CLIArgs{configPath: *configPath}
 }
 
-func configureLogger(env string, logCfg config.LoggerConfig) *slog.Logger {
-	var level slog.Level
-
-	switch logCfg.MinLevel {
-	case Info:
-		level = slog.LevelInfo
-	case Debug:
-		level = slog.LevelDebug
-	case Warn:
-		level = slog.LevelWarn
-	case Error:
-		level = slog.LevelError
-	}
-
-	handlerOptions := &slog.HandlerOptions{Level: level}
-
-	var handler slog.Handler
-	switch env {
-	case Local:
-		handler = slog.NewTextHandler(os.Stdout, handlerOptions)
-	case Production:
-		handler = slog.NewJSONHandler(os.Stdout, handlerOptions)
-	}
-
-	return slog.New(handler)
-}
