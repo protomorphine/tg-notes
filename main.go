@@ -48,16 +48,16 @@ func main() {
 
 	b.RegisterHandler(bot.HandlerTypeMessageText, "help", bot.MatchTypeCommand, help.New(logger))
 
-	removeWebhook := setWebhook(ctx, logger, b, cfg.Bot.WebHookURL)
+	removeWebhook := mustSetWebhook(ctx, logger, b, cfg.Bot.WebHookURL)
 	defer removeWebhook()
 
 	server := &http.Server{
-		Addr: cfg.HTTPServer.Addr,
+		Addr:    cfg.HTTPServer.Addr,
 		Handler: b.WebhookHandler(),
 	}
 
 	go func() {
-		logger.Info("starting http server for receiving webhook's", slog.String("address", server.Addr))
+		logger.Info("starting http server", slog.String("address", server.Addr))
 
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			logger.Error("error occured while running http server", sl.Err(err))
@@ -93,4 +93,3 @@ func mustParseAndValidateCLIArgs() *CLIArgs {
 
 	return &CLIArgs{configPath: *configPath}
 }
-

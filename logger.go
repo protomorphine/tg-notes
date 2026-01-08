@@ -22,10 +22,10 @@ const (
 	Production string = "prod"
 )
 
-func configureLogger(env string, logCfg config.LoggerConfig) *slog.Logger {
+func configureLogger(env string, cfg config.LoggerConfig) *slog.Logger {
 	var level slog.Level
 
-	switch logCfg.MinLevel {
+	switch cfg.MinLevel {
 	case Info:
 		level = slog.LevelInfo
 	case Debug:
@@ -43,9 +43,9 @@ func configureLogger(env string, logCfg config.LoggerConfig) *slog.Logger {
 		handler = tint.NewHandler(
 			os.Stdout,
 			&tint.Options{
-				AddSource:  true,
-				Level:      level,
-				TimeFormat: time.Kitchen,
+				AddSource:   true,
+				Level:       level,
+				TimeFormat:  time.Kitchen,
 				ReplaceAttr: tintReplaceAttr,
 			})
 	default:
