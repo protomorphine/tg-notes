@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"protomorphine/tg-notes/internal/bot/handlers"
@@ -39,8 +40,7 @@ func newBot(logger *slog.Logger, cfg *config.BotConfig) (*bot.Bot, error) {
 func mustSetWebhook(ctx context.Context, logger *slog.Logger, b *bot.Bot, webhookURL string) webhookRemoveFunc {
 	_, err := b.SetWebhook(ctx, &bot.SetWebhookParams{URL: webhookURL})
 	if err != nil {
-		logger.Error("error while setting webhook", sl.Err(err))
-		panic(err)
+		panic(fmt.Errorf("error while setting webhook: %v", err))
 	}
 
 	return func() {

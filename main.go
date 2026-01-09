@@ -30,7 +30,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger := configureLogger(cfg.Environment, cfg.Logger)
+	logger := configureLogger(cfg.Environment, &cfg.Logger)
 	logger = logger.With(slog.String("env", cfg.Environment))
 
 	logger.Info("starting tg-notes app")

@@ -22,7 +22,7 @@ const (
 	Production string = "prod"
 )
 
-func configureLogger(env string, cfg config.LoggerConfig) *slog.Logger {
+func configureLogger(env string, cfg *config.LoggerConfig) *slog.Logger {
 	var level slog.Level
 
 	switch cfg.MinLevel {

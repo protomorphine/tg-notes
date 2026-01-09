@@ -30,9 +30,7 @@ type HTTPServerConfig struct {
 
 func Load(configPath string) (*Config, error) {
 	var config Config
-	if err := cleanenv.ReadConfig(configPath, &config); err != nil {
-		return nil, err
-	}
 
-	return &config, nil
+	err := cleanenv.ReadConfig(configPath, &config)
+	return &config, err
 }
