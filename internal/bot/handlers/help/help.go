@@ -12,9 +12,13 @@ import (
 	"github.com/go-telegram/bot/models"
 )
 
-const helpText string = `available commands:
+const (
+	Cmd      = "help"
+	helpText = `available commands:
 \- */help*: provides some help information
+\- */add*: add a new note
 `
+)
 
 func New(logger *slog.Logger) bot.HandlerFunc {
 	return func(ctx context.Context, b *bot.Bot, update *models.Update) {

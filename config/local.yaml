@@ -1,8 +1,17 @@
 environment: "local"
 logger:
-  minLevel: "DEBUG"
+  minLevel: "INFO"
 bot:
-  webHookURL: "https://xwk4qr29-2000.euw.devtunnels.ms"
+  webHookURL: "https://bmgspmt3-2000.euw.devtunnels.ms"
   initTimeout: 5s
+  allowedUserID: 140302304
 httpServer:
   addr: ":2000"
+gitRepository:
+  url: "git@github.com:protomorphine/notes.git"
+  path: "/home/drzaytsev/notes/"
+  keyPath: "/home/drzaytsev/.ssh/id_ed25519"
+  saveTo: "bot-notes"
+  branch: "tg-notes"
+  committer:
+    name: "tg-notes-bot"

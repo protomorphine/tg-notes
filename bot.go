@@ -22,7 +22,9 @@ func newBot(logger *slog.Logger, cfg *config.BotConfig) (*bot.Bot, error) {
 		bot.WithDefaultHandler(fallback.New(logger)),
 		bot.WithCheckInitTimeout(cfg.InitTimeout),
 		bot.WithMiddlewares(
+			middleware.NewRecover(logger),
 			middleware.NewReqID(),
+			middleware.NewAuth(logger, cfg),
 			middleware.NewLog(logger),
 		),
 	}

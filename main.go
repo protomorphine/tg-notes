@@ -10,9 +10,11 @@ import (
 	"os"
 	"os/signal"
 
+	"protomorphine/tg-notes/internal/bot/handlers/add"
 	"protomorphine/tg-notes/internal/bot/handlers/help"
 	"protomorphine/tg-notes/internal/config"
 	sl "protomorphine/tg-notes/internal/logger"
+	"protomorphine/tg-notes/internal/storage/git"
 
 	"github.com/go-telegram/bot"
 )
@@ -46,7 +48,14 @@ func main() {
 
 	logger.Info("successfully authorized in telegram api")
 
-	b.RegisterHandler(bot.HandlerTypeMessageText, "help", bot.MatchTypeCommand, help.New(logger))
+	storage, err := git.New(&cfg.GitRepository)
+	if err != nil {
+		logger.Error("error while setting up storage", sl.Err(err))
+		os.Exit(1)
+	}
+
+	b.RegisterHandler(bot.HandlerTypeMessageText, help.Cmd, bot.MatchTypeCommand, help.New(logger))
+	b.RegisterHandler(bot.HandlerTypeMessageText, add.Cmd, bot.MatchTypeCommand, add.New(logger, storage))
 
 	removeWebhook := mustSetWebhook(ctx, logger, b, cfg.Bot.WebHookURL)
 	defer removeWebhook()
@@ -66,9 +75,7 @@ func main() {
 		logger.Info("http server stopped")
 	}()
 
-	go func() {
-		b.StartWebhook(ctx)
-	}()
+	go b.StartWebhook(ctx)
 
 	<-ctx.Done()
 
