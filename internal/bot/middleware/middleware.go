@@ -1,4 +1,2 @@
-// Package middleware provides middlewares for tg bot
+// Package middleware provides middlewares for telegram bot
 package middleware
-
-type middlewareCtxKey string

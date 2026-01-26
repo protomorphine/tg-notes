@@ -8,10 +8,11 @@ import (
 	"github.com/google/uuid"
 )
 
-const reqIDKey middlewareCtxKey = "reqID"
+type reqIDContextKey struct{}
 
+// GetReqID function    retrieves a request ID from given context.
 func GetReqID(ctx context.Context) uuid.UUID {
-	entry := ctx.Value(reqIDKey)
+	entry := ctx.Value(reqIDContextKey{})
 
 	if reqID, ok := entry.(uuid.UUID); ok {
 		return reqID
@@ -20,11 +21,12 @@ func GetReqID(ctx context.Context) uuid.UUID {
 	return uuid.Nil
 }
 
+// NewReqID function    creates a middleware for enrich context with unique request ID.
 func NewReqID() bot.Middleware {
 	return func(next bot.HandlerFunc) bot.HandlerFunc {
 		return func(ctx context.Context, b *bot.Bot, update *models.Update) {
 			reqID := uuid.New()
-			next(context.WithValue(ctx, reqIDKey, reqID), b, update)
+			next(context.WithValue(ctx, reqIDContextKey{}, reqID), b, update)
 		}
 	}
 }
