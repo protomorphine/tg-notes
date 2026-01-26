@@ -15,10 +15,6 @@ import (
 	"github.com/go-telegram/bot/models"
 )
 
-type NoteAdder interface {
-	Add(title, text string) error
-}
-
 const (
 	saveErrMsg      = "unable to save new note :\\("
 	saveSuccessMsg  = "note saved successfully"
@@ -26,6 +22,10 @@ const (
 
 	Cmd = "add"
 )
+
+type NoteAdder interface {
+	Add(title, text string) error
+}
 
 func New(logger *slog.Logger, adder NoteAdder) bot.HandlerFunc {
 	return func(ctx context.Context, b *bot.Bot, update *models.Update) {
