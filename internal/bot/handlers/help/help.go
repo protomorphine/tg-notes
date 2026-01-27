@@ -6,7 +6,7 @@ import (
 	"log/slog"
 
 	"protomorphine/tg-notes/internal/bot/middleware"
-	sl "protomorphine/tg-notes/internal/logger"
+	"protomorphine/tg-notes/internal/log"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -24,7 +24,7 @@ func New(logger *slog.Logger) bot.HandlerFunc {
 	return func(ctx context.Context, b *bot.Bot, update *models.Update) {
 		const op = "bot.handlers.help"
 		logger := logger.With(
-			sl.Op(op),
+			log.Op(op),
 			slog.String("reqID", middleware.GetReqID(ctx).String()),
 		)
 
@@ -34,7 +34,7 @@ func New(logger *slog.Logger) bot.HandlerFunc {
 			ParseMode: models.ParseModeMarkdown,
 		})
 		if err != nil {
-			logger.Error("error while sending message", sl.Err(err))
+			logger.Error("error while sending message", log.Err(err))
 		}
 	}
 }

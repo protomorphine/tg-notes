@@ -5,21 +5,19 @@ import (
 	"fmt"
 	"log/slog"
 
-	"protomorphine/tg-notes/internal/bot/handlers"
-	"protomorphine/tg-notes/internal/bot/handlers/fallback"
 	"protomorphine/tg-notes/internal/bot/middleware"
 	"protomorphine/tg-notes/internal/config"
-	sl "protomorphine/tg-notes/internal/logger"
+	"protomorphine/tg-notes/internal/log"
 
 	"github.com/go-telegram/bot"
 )
 
 type webhookRemoveFunc func()
 
-func newBot(logger *slog.Logger, cfg *config.BotConfig) (*bot.Bot, error) {
+func newBot(logger *slog.Logger, cfg *config.BotConfig, defaultHandler bot.HandlerFunc) (*bot.Bot, error) {
 	opts := []bot.Option{
-		bot.WithErrorsHandler(handlers.NewErrorHandler(logger)),
-		bot.WithDefaultHandler(fallback.New(logger)),
+		bot.WithErrorsHandler(log.NewErrorHandler(logger)),
+		bot.WithDefaultHandler(defaultHandler),
 		bot.WithCheckInitTimeout(cfg.InitTimeout),
 		bot.WithMiddlewares(
 			middleware.NewRecover(logger),
@@ -32,7 +30,7 @@ func newBot(logger *slog.Logger, cfg *config.BotConfig) (*bot.Bot, error) {
 	if logger.Enabled(context.Background(), slog.LevelDebug) {
 		opts = append(opts,
 			bot.WithDebug(),
-			bot.WithDebugHandler(handlers.NewDebugHandler(logger)),
+			bot.WithDebugHandler(log.NewDebugHandler(logger)),
 		)
 	}
 
@@ -48,7 +46,7 @@ func mustSetWebhook(ctx context.Context, logger *slog.Logger, b *bot.Bot, webhoo
 	return func() {
 		_, err := b.DeleteWebhook(context.Background(), &bot.DeleteWebhookParams{DropPendingUpdates: true})
 		if err != nil {
-			logger.Error("error while deleting webhook", sl.Err(err))
+			logger.Error("error while deleting webhook", log.Err(err))
 			return
 		}
 

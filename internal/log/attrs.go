@@ -1,5 +1,4 @@
-// Package sl provides helper functions for "log/slog" 
-package sl
+package log
 
 import "log/slog"
 

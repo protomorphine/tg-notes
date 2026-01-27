@@ -1,11 +1,9 @@
-// Package handlers provides handlers to tg bot
-package handlers
+// Package log provides helpers and logging handlers
+package log
 
 import (
 	"fmt"
 	"log/slog"
-
-	sl "protomorphine/tg-notes/internal/logger"
 
 	"github.com/go-telegram/bot"
 )
@@ -26,6 +24,6 @@ func NewErrorHandler(logger *slog.Logger) bot.ErrorsHandler {
 	return func(err error) {
 		logger := logger.With(slog.String("compotent", component))
 
-		logger.Error("error occured", sl.Err(err))
+		logger.Error("error occured", Err(err))
 	}
 }

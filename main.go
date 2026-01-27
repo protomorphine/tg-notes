@@ -10,10 +10,10 @@ import (
 	"os"
 	"os/signal"
 
-	"protomorphine/tg-notes/internal/bot/handlers/add"
+	"protomorphine/tg-notes/internal/bot/handlers"
 	"protomorphine/tg-notes/internal/bot/handlers/help"
 	"protomorphine/tg-notes/internal/config"
-	sl "protomorphine/tg-notes/internal/logger"
+	"protomorphine/tg-notes/internal/log"
 	"protomorphine/tg-notes/internal/storage/git"
 
 	"github.com/go-telegram/bot"
@@ -40,22 +40,23 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer stop()
 
-	b, err := newBot(logger, &cfg.Bot)
+	storage, err := git.New(&cfg.GitRepository)
 	if err != nil {
-		logger.Error("unable to initialize bot", sl.Err(err))
+		logger.Error("error while setting up storage", log.Err(err))
+		os.Exit(1)
+	}
+
+	logger.Info("successfully initialized git storage")
+
+	b, err := newBot(logger, &cfg.Bot, handlers.NewDefault(logger, storage))
+	if err != nil {
+		logger.Error("unable to initialize bot", log.Err(err))
 		os.Exit(1)
 	}
 
 	logger.Info("successfully authorized in telegram api")
 
-	storage, err := git.New(&cfg.GitRepository)
-	if err != nil {
-		logger.Error("error while setting up storage", sl.Err(err))
-		os.Exit(1)
-	}
-
 	b.RegisterHandler(bot.HandlerTypeMessageText, help.Cmd, bot.MatchTypeCommand, help.New(logger))
-	b.RegisterHandler(bot.HandlerTypeMessageText, add.Cmd, bot.MatchTypeCommand, add.New(logger, storage))
 
 	removeWebhook := mustSetWebhook(ctx, logger, b, cfg.Bot.WebHookURL)
 	defer removeWebhook()
@@ -69,7 +70,7 @@ func main() {
 		logger.Info("starting http server", slog.String("address", server.Addr))
 
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
-			logger.Error("error occured while running http server", sl.Err(err))
+			logger.Error("error occured while running http server", log.Err(err))
 		}
 
 		logger.Info("http server stopped")
@@ -80,7 +81,7 @@ func main() {
 	<-ctx.Done()
 
 	if err := server.Shutdown(context.Background()); err != nil {
-		logger.Error("can't shutdown http server gracefully", sl.Err(err))
+		logger.Error("can't shutdown http server gracefully", log.Err(err))
 	}
 }
 

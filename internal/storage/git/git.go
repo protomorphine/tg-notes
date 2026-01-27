@@ -15,9 +15,7 @@ import (
 	"github.com/go-git/go-git/v6/plumbing/transport/ssh"
 )
 
-const (
-	commitMsg = "note from tg-notes"
-)
+const commitMsg string = "note from tg-notes"
 
 type GitStorage struct {
 	*git.Repository

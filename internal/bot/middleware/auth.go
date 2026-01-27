@@ -3,9 +3,8 @@ package middleware
 import (
 	"context"
 	"log/slog"
-
 	"protomorphine/tg-notes/internal/config"
-	sl "protomorphine/tg-notes/internal/logger"
+	"protomorphine/tg-notes/internal/log"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -17,16 +16,21 @@ func NewAuth(logger *slog.Logger, cfg *config.BotConfig) bot.Middleware {
 		logger := logger.With(slog.String("component", "middleware/auth"))
 
 		return func(ctx context.Context, b *bot.Bot, update *models.Update) {
-			requestLogger := logger.With(slog.String("reqID", GetReqID(ctx).String()))
+			logger := logger.With(slog.String("reqID", GetReqID(ctx).String()))
+
+			if update.Message == nil {
+				logger.Warn("got nil message in update")
+				return
+			}
 
 			if update.Message.From.ID == cfg.AllowedUserID {
-				requestLogger.Info("successfully authorized new request")
+				logger.Info("successfully authorized new request")
 
 				next(ctx, b, update)
 				return
 			}
 
-			requestLogger.Error("sender ID missmatch allowed user ID", slog.Int64("fromID", update.Message.From.ID))
+			logger.Error("sender ID missmatch allowed user ID", slog.Int64("fromID", update.Message.From.ID))
 
 			_, err := b.SendMessage(ctx, &bot.SendMessageParams{
 				ChatID:    update.Message.Chat.ID,
@@ -37,7 +41,7 @@ func NewAuth(logger *slog.Logger, cfg *config.BotConfig) bot.Middleware {
 				},
 			})
 			if err != nil {
-				requestLogger.Error("error while sending message", sl.Err(err))
+				logger.Error("error while sending message", log.Err(err))
 			}
 		}
 	}

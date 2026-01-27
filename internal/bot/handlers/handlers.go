@@ -1,15 +1,14 @@
-// Package add provides handler for /add tg bot command
-package add
+// Package defaultHandler provides default handler for bot
+package handlers
 
 import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	"protomorphine/tg-notes/internal/bot/middleware"
-	sl "protomorphine/tg-notes/internal/logger"
+	"protomorphine/tg-notes/internal/log"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -19,32 +18,28 @@ const (
 	saveErrMsg      = "unable to save new note :\\("
 	saveSuccessMsg  = "note saved successfully"
 	emptyMessageMsg = "can't process empty message"
-
-	Cmd = "add"
 )
 
 type NoteAdder interface {
 	Add(title, text string) error
 }
 
-func New(logger *slog.Logger, adder NoteAdder) bot.HandlerFunc {
+func NewDefault(logger *slog.Logger, adder NoteAdder) bot.HandlerFunc {
 	return func(ctx context.Context, b *bot.Bot, update *models.Update) {
 		const op = "bot.handlers.add"
-		log := logger.With(sl.Op(op), slog.String("reqID", middleware.GetReqID(ctx).String()))
+		logger := logger.With(log.Op(op), slog.String("reqID", middleware.GetReqID(ctx).String()))
 
 		if update.Message == nil {
-			log.Error("empty message received")
+			logger.Error("empty message received")
 			return
 		}
 
 		chatID := update.Message.Chat.ID
-
-		text := strings.TrimPrefix(update.Message.Text, "/"+Cmd)
-		text = strings.TrimSpace(text)
+		text := update.Message.Text
 
 		if text == "" {
-			log.Warn("empty message received")
-			sendMessage(ctx, log, b, chatID, emptyMessageMsg)
+			logger.Warn("empty message received")
+			sendMessage(ctx, logger, b, chatID, emptyMessageMsg)
 
 			return
 		}
@@ -52,20 +47,20 @@ func New(logger *slog.Logger, adder NoteAdder) bot.HandlerFunc {
 		title := fmt.Sprintf("tg-notes bot %v", time.Now().Format(time.DateTime))
 
 		if err := adder.Add(title, text); err != nil {
-			log.Error("error occured while saving new note", sl.Err(err))
-			sendMessage(ctx, log, b, chatID, saveErrMsg)
+			logger.Error("error occured while saving new note", log.Err(err))
+			sendMessage(ctx, logger, b, chatID, saveErrMsg)
 
 			return
 		}
 
-		log.Info("new note saved")
-		sendMessage(ctx, log, b, chatID, saveSuccessMsg)
+		logger.Info("new note saved")
+		sendMessage(ctx, logger, b, chatID, saveSuccessMsg)
 	}
 }
 
 func sendMessage(
 	ctx context.Context,
-	log *slog.Logger,
+	logger *slog.Logger,
 	b *bot.Bot,
 	chatID int64,
 	text string,
@@ -76,6 +71,6 @@ func sendMessage(
 		ParseMode: models.ParseModeMarkdown,
 	})
 	if err != nil {
-		log.Error("error occured while sending message", sl.Err(err))
+		logger.Error("error occured while sending message", log.Err(err))
 	}
 }
