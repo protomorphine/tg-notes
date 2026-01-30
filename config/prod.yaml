@@ -3,5 +3,12 @@ logger:
   minLevel: "INFO"
 bot:
   initTimeout: 5s
+  allowedUserID: 140302304
 httpServer:
   addr: ":2000"
+gitRepository:
+  url: "git@github.com:protomorphine/notes.git"
+  saveTo: "tg-notes"
+  branch: "tg-notes"
+  committer:
+    name: "tg-notes-bot"

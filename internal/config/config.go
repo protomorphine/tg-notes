@@ -8,7 +8,7 @@ import (
 )
 
 type Config struct {
-	Environment   string           `yaml:"environment" env-default:"local"`
+	Environment   string           `yaml:"environment" env-default:"prod"`
 	Logger        LoggerConfig     `yaml:"logger"`
 	Bot           BotConfig        `yaml:"bot"`
 	HTTPServer    HTTPServerConfig `yaml:"httpServer"`
@@ -18,7 +18,7 @@ type Config struct {
 type BotConfig struct {
 	Key           string        `env:"TG_API_KEY" env-required:"true"`
 	InitTimeout   time.Duration `yaml:"initTimeout" env-default:"1m"`
-	WebHookURL    string        `yaml:"webHookURL" env-required:"true"`
+	WebHookURL    string        `yaml:"webHookURL" env:"WEBHOOK_URL" env-required:"true"`
 	AllowedUserID int64         `yaml:"allowedUserID"`
 }
 

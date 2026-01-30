@@ -2,7 +2,6 @@ environment: "local"
 logger:
   minLevel: "INFO"
 bot:
-  webHookURL: "https://bmgspmt3-2000.euw.devtunnels.ms"
   initTimeout: 5s
   allowedUserID: 140302304
 httpServer:
