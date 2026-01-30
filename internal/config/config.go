@@ -33,7 +33,7 @@ type HTTPServerConfig struct {
 type GitRepository struct {
 	URL         string    `yaml:"url" env-required:"true"`
 	Path        string    `yaml:"path"`
-	KeyPath     string    `yaml:"keyPath"`
+	Key         string    `env:"KEY"`
 	KeyPassword string    `env:"KEY_PASSWD"`
 	PathToSave  string    `yaml:"saveTo" env-required:"true"`
 	Branch      string    `yaml:"branch"`

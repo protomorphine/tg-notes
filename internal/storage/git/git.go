@@ -27,7 +27,7 @@ type GitStorage struct {
 func New(cfg *config.GitRepository) (*GitStorage, error) {
 	const op = "storage.git.New"
 
-	publicKeys, err := ssh.NewPublicKeysFromFile("git", cfg.KeyPath, cfg.KeyPassword)
+	publicKeys, err := ssh.NewPublicKeys("git", []byte(cfg.Key), cfg.KeyPassword)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
