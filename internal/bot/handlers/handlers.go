@@ -1,8 +1,9 @@
-// Package defaultHandler provides default handler for bot
+// Package handlers provides default handler for bot
 package handlers
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"log/slog"
 	"time"
@@ -14,10 +15,15 @@ import (
 	"github.com/go-telegram/bot/models"
 )
 
-const (
-	saveErrMsg      = "unable to save new note :\\("
-	saveSuccessMsg  = "note saved successfully"
-	emptyMessageMsg = "can't process empty message"
+var (
+	//go:embed resources/save_err.tmpl
+	saveErrMsg string
+
+	//go:embed resources/save_success.tmpl
+	saveSuccessMsg string
+
+	//go:embed resources/empty_message.tmpl
+	emptyMessageMsg string
 )
 
 type NoteAdder interface {
@@ -38,10 +44,14 @@ func NewDefault(logger *slog.Logger, adder NoteAdder) bot.HandlerFunc {
 		text := update.Message.Text
 
 		if text == "" {
-			logger.Warn("empty message received")
-			sendMessage(ctx, logger, b, chatID, emptyMessageMsg)
+			text = update.Message.Caption
 
-			return
+			if text == "" {
+				logger.Warn("empty message received")
+				sendMessage(ctx, logger, b, chatID, emptyMessageMsg)
+
+				return 
+			}
 		}
 
 		title := fmt.Sprintf("tg-notes bot %v", time.Now().Format(time.DateTime))
@@ -68,7 +78,7 @@ func sendMessage(
 	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:    chatID,
 		Text:      text,
-		ParseMode: models.ParseModeMarkdown,
+		ParseMode: models.ParseModeMarkdownV1,
 	})
 	if err != nil {
 		logger.Error("error occured while sending message", log.Err(err))

@@ -20,8 +20,8 @@ func newBot(logger *slog.Logger, cfg *config.BotConfig, defaultHandler bot.Handl
 		bot.WithDefaultHandler(defaultHandler),
 		bot.WithCheckInitTimeout(cfg.InitTimeout),
 		bot.WithMiddlewares(
-			middleware.NewRecover(logger),
 			middleware.NewReqID(),
+			middleware.NewRecover(logger),
 			middleware.NewAuth(logger, cfg),
 			middleware.NewLog(logger),
 		),
