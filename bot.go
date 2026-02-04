@@ -5,19 +5,21 @@ import (
 	"fmt"
 	"log/slog"
 
+	"protomorphine/tg-notes/internal/bot/handlers"
 	"protomorphine/tg-notes/internal/bot/middleware"
 	"protomorphine/tg-notes/internal/config"
 	"protomorphine/tg-notes/internal/log"
 
 	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 )
 
 type webhookRemoveFunc func()
 
-func newBot(logger *slog.Logger, cfg *config.BotConfig, defaultHandler bot.HandlerFunc) (*bot.Bot, error) {
+func newBot(logger *slog.Logger, cfg *config.BotConfig, defaultHandler handlers.DefaultHandler) (*bot.Bot, error) {
 	opts := []bot.Option{
 		bot.WithErrorsHandler(log.NewErrorHandler(logger)),
-		bot.WithDefaultHandler(defaultHandler),
+		bot.WithDefaultHandler(wrapHandler(defaultHandler)),
 		bot.WithCheckInitTimeout(cfg.InitTimeout),
 		bot.WithMiddlewares(
 			middleware.NewReqID(),
@@ -35,6 +37,12 @@ func newBot(logger *slog.Logger, cfg *config.BotConfig, defaultHandler bot.Handl
 	}
 
 	return bot.New(cfg.Key, opts...)
+}
+
+func wrapHandler(handler handlers.DefaultHandler) bot.HandlerFunc {
+	return func(ctx context.Context, bot *bot.Bot, update *models.Update) {
+		handler(ctx, bot, update)
+	}
 }
 
 func mustSetWebhook(ctx context.Context, logger *slog.Logger, b *bot.Bot, webhookURL string) webhookRemoveFunc {

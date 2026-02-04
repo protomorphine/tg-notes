@@ -26,12 +26,20 @@ var (
 	emptyMessageMsg string
 )
 
+//mockery:generate: true
 type NoteAdder interface {
 	Add(title, text string) error
 }
 
-func NewDefault(logger *slog.Logger, adder NoteAdder) bot.HandlerFunc {
-	return func(ctx context.Context, b *bot.Bot, update *models.Update) {
+//mockery:generate: true
+type MessageSender interface {
+	SendMessage(ctx context.Context, params *bot.SendMessageParams) (*models.Message, error)
+}
+
+type DefaultHandler func(ctx context.Context, sender MessageSender, update *models.Update)
+
+func NewDefault(logger *slog.Logger, adder NoteAdder) DefaultHandler {
+	return func(ctx context.Context, sender MessageSender, update *models.Update) {
 		const op = "bot.handlers.add"
 		logger := logger.With(log.Op(op), slog.String("reqID", middleware.GetReqID(ctx).String()))
 
@@ -48,9 +56,9 @@ func NewDefault(logger *slog.Logger, adder NoteAdder) bot.HandlerFunc {
 
 			if text == "" {
 				logger.Warn("empty message received")
-				sendMessage(ctx, logger, b, chatID, emptyMessageMsg)
+				sendMessage(ctx, logger, sender, chatID, emptyMessageMsg)
 
-				return 
+				return
 			}
 		}
 
@@ -58,24 +66,24 @@ func NewDefault(logger *slog.Logger, adder NoteAdder) bot.HandlerFunc {
 
 		if err := adder.Add(title, text); err != nil {
 			logger.Error("error occured while saving new note", log.Err(err))
-			sendMessage(ctx, logger, b, chatID, saveErrMsg)
+			sendMessage(ctx, logger, sender, chatID, saveErrMsg)
 
 			return
 		}
 
 		logger.Info("new note saved")
-		sendMessage(ctx, logger, b, chatID, saveSuccessMsg)
+		sendMessage(ctx, logger, sender, chatID, saveSuccessMsg)
 	}
 }
 
 func sendMessage(
 	ctx context.Context,
 	logger *slog.Logger,
-	b *bot.Bot,
+	sender MessageSender,
 	chatID int64,
 	text string,
 ) {
-	_, err := b.SendMessage(ctx, &bot.SendMessageParams{
+	_, err := sender.SendMessage(ctx, &bot.SendMessageParams{
 		ChatID:    chatID,
 		Text:      text,
 		ParseMode: models.ParseModeMarkdownV1,

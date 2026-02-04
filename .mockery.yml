@@ -1,0 +1,9 @@
+all: false
+pkgname: mocks
+formatter: gofmt
+include-auto-generated: true
+dir: "{{.InterfaceDir}}/mocks"
+structname: "{{.InterfaceName}}"
+filename: "{{.InterfaceName}}.go"
+packages:
+  protomorphine/tg-notes/internal/bot/handlers:
