@@ -1,6 +1,6 @@
 all: false
-pkgname: mocks
-formatter: gofmt
+pkgname: "mocks"
+formatter: "gofmt"
 include-auto-generated: true
 dir: "{{.InterfaceDir}}/mocks"
 structname: "{{.InterfaceName}}"
