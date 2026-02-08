@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"sync"
 
 	"protomorphine/tg-notes/internal/config"
 
@@ -22,6 +23,7 @@ type GitStorage struct {
 	*git.Worktree
 	pubKey *ssh.PublicKeys
 	config *config.GitRepository
+	mu     sync.Mutex
 }
 
 func New(cfg *config.GitRepository) (*GitStorage, error) {
@@ -54,8 +56,8 @@ func New(cfg *config.GitRepository) (*GitStorage, error) {
 	remoteBranch := plumbing.NewRemoteReferenceName("origin", cfg.Branch)
 
 	// go-git do not see an existing branch by default
-	// so we need to add it manualy
-	repo.CreateBranch(&gitCfg.Branch{
+	// so we need to add it manually
+	_ = repo.CreateBranch(&gitCfg.Branch{
 		Name:   cfg.Branch,
 		Remote: "origin",
 		Merge:  localBranch,
@@ -89,6 +91,9 @@ func New(cfg *config.GitRepository) (*GitStorage, error) {
 
 func (g *GitStorage) Add(title, text string) error {
 	const op = "storage.git.Add"
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
 
 	if err := g.prepareStorage(); err != nil {
 		return fmt.Errorf("%s: error while preparing storage: %w", op, err)
@@ -143,7 +148,7 @@ func (g *GitStorage) save() error {
 }
 
 func (g *GitStorage) prepareStorage() error {
-	pullOpts := &git.PullOptions{RemoteName: "origin", Auth: g.pubKey, Force: true}
+	pullOpts := &git.PullOptions{RemoteName: "origin", Auth: g.pubKey}
 	if err := g.Pull(pullOpts); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
 		return err
 	}
