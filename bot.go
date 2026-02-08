@@ -9,6 +9,7 @@ import (
 	"protomorphine/tg-notes/internal/bot/middleware"
 	"protomorphine/tg-notes/internal/config"
 	"protomorphine/tg-notes/internal/log"
+	botlog "protomorphine/tg-notes/internal/log/bot"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -18,7 +19,7 @@ type webhookRemoveFunc func()
 
 func newBot(logger *slog.Logger, cfg *config.BotConfig, defaultHandler handlers.DefaultHandler) (*bot.Bot, error) {
 	opts := []bot.Option{
-		bot.WithErrorsHandler(log.NewErrorHandler(logger)),
+		bot.WithErrorsHandler(botlog.NewErrorHandler(logger)),
 		bot.WithDefaultHandler(wrapHandler(defaultHandler)),
 		bot.WithCheckInitTimeout(cfg.InitTimeout),
 		bot.WithMiddlewares(
@@ -32,7 +33,7 @@ func newBot(logger *slog.Logger, cfg *config.BotConfig, defaultHandler handlers.
 	if logger.Enabled(context.Background(), slog.LevelDebug) {
 		opts = append(opts,
 			bot.WithDebug(),
-			bot.WithDebugHandler(log.NewDebugHandler(logger)),
+			bot.WithDebugHandler(botlog.NewDebugHandler(logger)),
 		)
 	}
 
