@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path"
 	"sync"
+	"time"
 
 	"protomorphine/tg-notes/internal/config"
 
@@ -134,6 +135,7 @@ func (g *GitStorage) save() error {
 	commitOpts := &git.CommitOptions{
 		Committer: &object.Signature{
 			Name: g.config.Committer.Name,
+			When: time.Now(),
 		},
 	}
 
@@ -148,10 +150,16 @@ func (g *GitStorage) save() error {
 }
 
 func (g *GitStorage) prepareStorage() error {
+
+	/*
+	waiting for https://github.com/go-git/go-git/pull/1815
+
 	pullOpts := &git.PullOptions{RemoteName: "origin", Auth: g.pubKey}
 	if err := g.Pull(pullOpts); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
 		return err
 	}
+
+	*/
 
 	return nil
 }

@@ -9,7 +9,6 @@ httpServer:
 gitRepository:
   url: "git@github.com:protomorphine/notes.git"
   path: "/home/drzaytsev/notes/"
-  keyPath: "/home/drzaytsev/.ssh/id_ed25519"
   saveTo: "bot-notes"
   branch: "tg-notes"
   committer:
