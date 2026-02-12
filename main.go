@@ -48,6 +48,8 @@ func main() {
 
 	logger.Info("successfully initialized git storage")
 
+	go storage.Processor(ctx, logger)
+
 	b, err := newBot(logger, &cfg.Bot, handlers.NewDefault(logger, storage))
 	if err != nil {
 		logger.Error("unable to initialize bot", log.Err(err))

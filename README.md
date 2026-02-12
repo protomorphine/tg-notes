@@ -1,106 +1,101 @@
-# TG-Notes Bot
+# Telegram Notes Bot
 
-TG-Notes Bot is a Telegram bot that allows you to quickly save notes to a Git repository. It's a simple and efficient way to keep track of your ideas, thoughts, and to-do lists.
+This is a simple Telegram bot that allows you to save your notes to a Git repository.
 
 ## Features
 
-- **Simple and Fast:** Just send a message to the bot, and it will be saved as a new note in your Git repository.
-- **Secure:** The bot uses SSH to authenticate with your Git repository, ensuring that your notes are stored securely.
-- **Configurable:** You can easily configure the bot to use your own Git repository and customize its behavior.
-- **Dockerized:** The bot can be easily deployed using Docker.
+- Saves notes as Markdown files in a Git repository.
+- Periodically pushes changes to a remote repository.
+- Authentication middleware to restrict access to the bot.
+- Supports `/help` command to display a help message.
+- Configurable via a YAML file and environment variables.
+- Dockerized for easy deployment.
 
-## How it Works
+## How it works
 
-The bot uses the Telegram Bot API to receive messages from users. When a new message is received, the bot creates a new file in a local Git repository, commits the file, and then pushes the changes to a remote repository.
+The bot uses the `go-telegram/bot` library to interact with the Telegram Bot API. It listens for incoming messages via a webhook.
 
-The bot's workflow is as follows:
+When a message is received, it passes through a series of middlewares:
 
-1. A user sends a message to the Telegram bot.
-2. The bot receives the message via a webhook.
-3. The message content is used to create a new file in a local Git repository. The filename is generated based on the current date and time.
-4. The new file is committed to the local repository with a commit message "note from tg-notes".
-5. The changes are pushed to the remote Git repository.
+1.  `ReqID`: Assigns a unique request ID to each incoming request for logging and tracing.
+2.  `Recover`: Recovers from panics and logs them.
+3.  `Auth`: Checks if the message is from an authorized user.
+4.  `Log`: Logs information about the incoming request.
 
-## Getting Started
+If the request is authorized, the message is processed by the appropriate handler. The default handler saves the message text as a new note in the Git repository. The notes are temporarily stored in a buffer and are periodically pushed to the remote repository.
 
-To get started with the TG-Notes Bot, you'll need to have the following prerequisites:
+The storage backend is implemented using the `go-git/go-git` library. It clones a remote repository, creates new files with the notes, commits them, and pushes them to the remote.
 
-- Go (version 1.22 or later)
-- A Telegram bot token
-- A Git repository
+## Configuration
 
-### Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/protomorphine/tg-notes.git
-   ```
-2. Create a new Telegram bot using the [BotFather](https://core.telegram.org/bots#6-botfather) and get your bot token.
-3. Create a new Git repository (e.g., on GitHub) to store your notes.
-4. Generate an SSH key pair to allow the bot to authenticate with your Git repository.
-
-### Configuration
-
-The bot is configured using a YAML file. You can create a `config/local.yaml` file based on the `config/local.yaml` example:
+The application is configured via a YAML file and environment variables. The configuration file path must be provided as a command-line argument.
 
 ```yaml
+# config/local.yaml
 environment: "local"
+
 logger:
-  minLevel: "INFO"
+  minLevel: "DEBUG"
+
 bot:
-  initTimeout: 5s
-  allowedUserID: YOUR_TELEGRAM_USER_ID
+  initTimeout: "1m"
+  webHookURL: "https://example.com" # Should be redefined via environment variable
+  allowedUserID: 123456789
+
 httpServer:
-  addr: ":2000"
+  addr: ":8080"
+
 gitRepository:
-  url: "YOUR_GIT_REPOSITORY_URL"
-  path: "/path/to/your/local/repository"
-  key: "YOUR_SSH_PRIVATE_KEY"
-  keyPassword: "YOUR_SSH_KEY_PASSWORD"
+  url: "git@github.com:user/repo.git" # Should be redefined
+  path: "/app/notes"
+  key: "" # Should be redefined via environment variable
+  keyPassword: "" # Should be redefined via environment variable
   saveTo: "notes"
   branch: "main"
   committer:
-    name: "tg-notes-bot"
+    name: "tg-notes bot"
+  bufSize: 10
+  updateDuration: "5m"
 ```
 
-Replace the placeholder values with your own settings:
+The following environment variables can be used to override the configuration:
 
-- `YOUR_TELEGRAM_USER_ID`: Your Telegram user ID. You can get this by sending a message to the `@userinfobot` bot on Telegram.
-- `YOUR_GIT_REPOSITORY_URL`: The SSH URL of your Git repository.
-- `/path/to/your/local/repository`: The local path where the Git repository will be cloned.
-- `YOUR_SSH_PRIVATE_KEY`: Your SSH private key.
-- `YOUR_SSH_KEY_PASSWORD`: The password for your SSH key (if any).
+- `TG_API_KEY`: The Telegram bot API key.
+- `WEBHOOK_URL`: The URL where the bot will receive updates.
+- `KEY`: The SSH private key to access the Git repository.
+- `KEY_PASSWD`: The password for the SSH key.
 
-### Running the Bot
+## Installation and usage
 
-Once you've configured the bot, you can run it using the following command:
+The application can be built and run using Docker.
 
-```bash
-go run main.go --config config/local.yaml
-```
+1.  **Clone the repository:**
 
-## Docker
+    ```bash
+    git clone https://github.com/protomorphine/tg-notes.git
+    cd tg-notes
+    ```
 
-You can also run the bot using Docker. First, build the Docker image:
+2.  **Create a `config/local.yaml` file** with your configuration.
 
-```bash
-docker build -t tg-notes-bot .
-```
+3.  **Create a `.env` file** with your environment variables:
 
-Then, run the Docker container with your configuration file:
+    ```bash
+    # .env
+    TG_API_KEY=your_telegram_api_key
+    WEBHOOK_URL=your_webhook_url
+    KEY=your_ssh_private_key
+    KEY_PASSWD=your_ssh_key_password
+    ```
 
-```bash
-docker run -v $(pwd)/config/local.yaml:/app/config/local.yaml tg-notes-bot
-```
+4.  **Build and run the Docker container:**
 
-## Dependencies
+    ```bash
+    docker build -t tg-notes .
+    docker run --rm -it --env-file .env tg-notes --config ./config/local.yaml
+    ```
 
-The TG-Notes Bot uses the following main dependencies:
+## Commands
 
-- [go-telegram/bot](https://github.com/go-telegram/bot): A Telegram bot library for Go.
-- [go-git/go-git](https://github.com/go-git/go-git): A pure Go implementation of Git.
-- [ilyakaznacheev/cleanenv](https://github.com/ilyakaznacheev/cleanenv): A library for reading configuration from files, environment variables, and command-line arguments.
-
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+- `/help`: Shows a help message.
+- Any other text message will be saved as a new note.

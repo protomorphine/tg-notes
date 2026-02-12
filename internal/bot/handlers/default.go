@@ -28,7 +28,7 @@ var (
 
 //mockery:generate: true
 type NoteAdder interface {
-	Add(title, text string) error
+	Add(ctx context.Context, title, text string) error
 }
 
 //mockery:generate: true
@@ -48,6 +48,8 @@ func NewDefault(logger *slog.Logger, adder NoteAdder) DefaultHandler {
 			return
 		}
 
+		messageID := update.Message.ID
+
 		chatID := update.Message.Chat.ID
 		text := update.Message.Text
 
@@ -56,7 +58,7 @@ func NewDefault(logger *slog.Logger, adder NoteAdder) DefaultHandler {
 
 			if text == "" {
 				logger.Warn("empty message received")
-				sendMessage(ctx, logger, sender, chatID, emptyMessageMsg)
+				sendMessage(ctx, logger, sender, chatID, messageID, emptyMessageMsg)
 
 				return
 			}
@@ -64,15 +66,15 @@ func NewDefault(logger *slog.Logger, adder NoteAdder) DefaultHandler {
 
 		title := fmt.Sprintf("tg-notes bot %v", time.Now().Format(time.DateTime))
 
-		if err := adder.Add(title, text); err != nil {
+		if err := adder.Add(ctx, title, text); err != nil {
 			logger.Error("error occured while saving new note", log.Err(err))
-			sendMessage(ctx, logger, sender, chatID, saveErrMsg)
+			sendMessage(ctx, logger, sender, chatID, messageID, saveErrMsg)
 
 			return
 		}
 
 		logger.Info("new note saved")
-		sendMessage(ctx, logger, sender, chatID, saveSuccessMsg)
+		sendMessage(ctx, logger, sender, chatID, messageID, saveSuccessMsg)
 	}
 }
 
@@ -81,11 +83,15 @@ func sendMessage(
 	logger *slog.Logger,
 	sender MessageSender,
 	chatID int64,
+	replyID int,
 	text string,
 ) {
 	_, err := sender.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID:    chatID,
-		Text:      text,
+		ChatID: chatID,
+		Text:   text,
+		ReplyParameters: &models.ReplyParameters{
+			MessageID: replyID,
+		},
 		ParseMode: models.ParseModeMarkdownV1,
 	})
 	if err != nil {

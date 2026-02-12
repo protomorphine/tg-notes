@@ -1,6 +1,6 @@
 environment: "local"
 logger:
-  minLevel: "INFO"
+  minLevel: "DEBUG"
 bot:
   initTimeout: 5s
   allowedUserID: 140302304
@@ -11,5 +11,7 @@ gitRepository:
   path: "/home/drzaytsev/notes/"
   saveTo: "bot-notes"
   branch: "tg-notes"
+  bufSize: 5
+  updateDuration: 1m
   committer:
     name: "tg-notes-bot"
