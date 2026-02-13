@@ -1,6 +1,6 @@
 environment: "local"
 logger:
-  minLevel: "DEBUG"
+  minLevel: "INFO"
 bot:
   initTimeout: 5s
   allowedUserID: 140302304

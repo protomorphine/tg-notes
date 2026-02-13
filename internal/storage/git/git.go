@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"path"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"protomorphine/tg-notes/internal/config"
@@ -23,22 +22,19 @@ import (
 
 const commitMsg string = "note from tg-notes"
 
-var (
-	noErrNothingToDo      error = errors.New("nothing to do")
-	noErrUpdateInProgress error = errors.New("update in progress")
-)
+var noErrNothingToDo error = errors.New("nothing to do")
 
 type GitStorage struct {
-	repo     *git.Repository
 	worktree *git.Worktree
-
-	pubKey *ssh.PublicKeys
+	repo     *git.Repository
+	pubKey   *ssh.PublicKeys
 
 	config *config.GitRepository
-	mu     sync.Mutex
 
-	buf      []string
-	updating *atomic.Bool
+	mu sync.Mutex
+
+	buf       []string
+	bufFullCh chan struct{}
 }
 
 // New creates instance of GitStorage
@@ -98,12 +94,12 @@ func New(cfg *config.GitRepository) (*GitStorage, error) {
 	}
 
 	return &GitStorage{
-		config:   cfg,
-		repo:     repo,
-		worktree: worktree,
-		pubKey:   publicKeys,
-		buf:      make([]string, 0, cfg.BufSize),
-		updating: &atomic.Bool{},
+		config:    cfg,
+		repo:      repo,
+		worktree:  worktree,
+		pubKey:    publicKeys,
+		buf:       make([]string, 0, cfg.BufSize),
+		bufFullCh: make(chan struct{}, 1),
 	}, nil
 }
 
@@ -120,8 +116,12 @@ func (g *GitStorage) Add(ctx context.Context, title, text string) error {
 	}
 
 	g.buf = append(g.buf, path)
+
 	if len(g.buf) == g.config.BufSize {
-		go g.handlePendingNotes(ctx) // todo: log saved notes
+		select {
+		case g.bufFullCh <- struct{}{}:
+		default:
+		}
 	}
 
 	return nil
@@ -135,77 +135,84 @@ func (g *GitStorage) Processor(ctx context.Context, logger *slog.Logger) {
 	duration := g.config.UpdateDuratiion
 
 	logger.Info("starting update storage", slog.String("duration", duration.String()))
-	timer := time.Tick(duration)
+	ticker := time.Tick(duration)
 
 	for {
 		select {
 		case <-ctx.Done():
+			close(g.bufFullCh)
 			return
 
-		case _, ok := <-timer:
+		case _, ok := <-g.bufFullCh:
 			if !ok {
 				continue
 			}
 
-			logger.Debug("it's time to update!")
+			logger.Debug("start updating remote storage, reason: buffer is full")
+			g.triggerUpdate(ctx, logger)
 
-			saved, err := g.handlePendingNotes(ctx)
-			if err != nil {
-
-				if errors.Is(err, noErrNothingToDo) {
-					logger.Debug("no new notes to save")
-					continue
-				}
-
-				if errors.Is(err, noErrUpdateInProgress) {
-					logger.Debug("update is already in progress")
-					continue
-				}
-
-				logger.Error("error while handling pending notes", log.Err(err))
+		case _, ok := <-ticker:
+			if !ok {
+				continue
 			}
 
-			logger.Info("notes saved successfully", slog.Int("count", saved))
+			logger.Debug("start updating remote storage, reason: timer")
+			g.triggerUpdate(ctx, logger)
 		}
 	}
+}
+
+func (g *GitStorage) triggerUpdate(ctx context.Context, logger *slog.Logger) {
+	saved, err := g.handlePendingNotes(ctx)
+	if err != nil {
+
+		if errors.Is(err, noErrNothingToDo) {
+			logger.Debug("no new notes to save")
+			return
+		}
+
+		logger.Error("error while handling pending notes", log.Err(err))
+		return
+	}
+
+	logger.Info("notes saved successfully", slog.Int("count", saved))
 }
 
 func (g *GitStorage) handlePendingNotes(ctx context.Context) (int, error) {
 	const op = "storage.git.handlePendingNotes"
 
-	if ctx.Err() != nil {
-		return 0, fmt.Errorf("%s: context err: %w", op, ctx.Err())
+	if err := ctx.Err(); err != nil {
+		return 0, fmt.Errorf("%s: context err: %w", op, err)
 	}
 
-	if g.updating.Load() {
-		return 0, noErrUpdateInProgress
-	}
+	g.mu.Lock()
 
 	if len(g.buf) == 0 {
+		g.mu.Unlock()
 		return 0, noErrNothingToDo
 	}
 
-	g.updating.Store(true)
-	defer g.updating.Store(false)
+	buf := make([]string, len(g.buf))
+	copy(buf, g.buf)
 
-	if err := g.prepareStorage(); err != nil {
+	g.buf = g.buf[:0]
+	g.mu.Unlock()
+
+	if err := g.prepareStorage(ctx); err != nil {
 		return 0, fmt.Errorf("%s: error while preparing storage: %w", op, err)
 	}
 
-	for _, path := range g.buf {
+	for _, path := range buf {
 		if _, err := g.worktree.Add(path); err != nil {
 			return 0, fmt.Errorf("%s: error while add file %s to worktree: %w", op, path, err)
 		}
 	}
 
-	if err := g.save(); err != nil {
+	if err := g.save(ctx); err != nil {
 		return 0, fmt.Errorf("%s: error while saving notes: %w", op, err)
 	}
 
-	saved := len(g.buf)
-	g.buf = g.buf[:0]
-
-	return saved, nil
+	return len(buf), nil
 }
 
 func (g *GitStorage) createFile(filename, content string) (string, error) {
@@ -221,7 +228,7 @@ func (g *GitStorage) createFile(filename, content string) (string, error) {
 	return path, err
 }
 
-func (g *GitStorage) save() error {
+func (g *GitStorage) save(ctx context.Context) error {
 	commitOpts := &git.CommitOptions{
 		Committer: &object.Signature{
 			Name: g.config.Committer.Name,
@@ -233,15 +240,15 @@ func (g *GitStorage) save() error {
 		return err
 	}
 
-	return g.repo.Push(&git.PushOptions{
+	return g.repo.PushContext(ctx, &git.PushOptions{
 		Auth:       g.pubKey,
 		RemoteName: "origin",
 	})
 }
 
-func (g *GitStorage) prepareStorage() error {
-	pullOpts := &git.PullOptions{RemoteName: "origin", Auth: g.pubKey}
-	if err := g.worktree.Pull(pullOpts); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
+func (g *GitStorage) prepareStorage(ctx context.Context) error {
+	pullOpts := &git.PullOptions{RemoteName: "origin", Auth: g.pubKey, Force: true}
+	if err := g.worktree.PullContext(ctx, pullOpts); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
 		return err
 	}
 
