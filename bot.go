@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"protomorphine/tg-notes/internal/bot/handlers"
+	"protomorphine/tg-notes/internal/bot/handlers/help"
 	"protomorphine/tg-notes/internal/bot/middleware"
 	"protomorphine/tg-notes/internal/config"
 	"protomorphine/tg-notes/internal/log"
@@ -37,7 +38,15 @@ func newBot(logger *slog.Logger, cfg *config.BotConfig, defaultHandler handlers.
 		)
 	}
 
-	return bot.New(cfg.Key, opts...)
+	b, err := bot.New(cfg.Key, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	// register additional command handlers
+	b.RegisterHandler(bot.HandlerTypeMessageText, help.Cmd, bot.MatchTypeCommand, help.New(logger))
+
+	return b, nil
 }
 
 func wrapHandler(handler handlers.DefaultHandler) bot.HandlerFunc {

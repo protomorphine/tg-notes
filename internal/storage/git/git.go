@@ -24,8 +24,8 @@ import (
 const commitMsg string = "note from tg-notes"
 
 var (
-	NoErrNothingToDo      error = errors.New("nothing to do")
-	NoErrUpdateInProgress error = errors.New("update in progress")
+	noErrNothingToDo      error = errors.New("nothing to do")
+	noErrUpdateInProgress error = errors.New("update in progress")
 )
 
 type GitStorage struct {
@@ -135,7 +135,7 @@ func (g *GitStorage) Processor(ctx context.Context, logger *slog.Logger) {
 	duration := g.config.UpdateDuratiion
 
 	logger.Info("starting update storage", slog.String("duration", duration.String()))
-	timer := time.Tick(duration) // todo: move to config
+	timer := time.Tick(duration)
 
 	for {
 		select {
@@ -147,23 +147,17 @@ func (g *GitStorage) Processor(ctx context.Context, logger *slog.Logger) {
 				continue
 			}
 
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-
 			logger.Debug("it's time to update!")
 
 			saved, err := g.handlePendingNotes(ctx)
 			if err != nil {
 
-				if errors.Is(err, NoErrNothingToDo) {
+				if errors.Is(err, noErrNothingToDo) {
 					logger.Debug("no new notes to save")
 					continue
 				}
 
-				if errors.Is(err, NoErrUpdateInProgress) {
+				if errors.Is(err, noErrUpdateInProgress) {
 					logger.Debug("update is already in progress")
 					continue
 				}
@@ -179,18 +173,16 @@ func (g *GitStorage) Processor(ctx context.Context, logger *slog.Logger) {
 func (g *GitStorage) handlePendingNotes(ctx context.Context) (int, error) {
 	const op = "storage.git.handlePendingNotes"
 
-	select {
-	case <-ctx.Done():
-		return 0, ctx.Err()
-	default:
+	if ctx.Err() != nil {
+		return 0, fmt.Errorf("%s: context err: %w", op, ctx.Err())
 	}
 
 	if g.updating.Load() {
-		return 0, NoErrUpdateInProgress
+		return 0, noErrUpdateInProgress
 	}
 
 	if len(g.buf) == 0 {
-		return 0, NoErrNothingToDo
+		return 0, noErrNothingToDo
 	}
 
 	g.updating.Store(true)

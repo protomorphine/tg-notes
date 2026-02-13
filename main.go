@@ -11,12 +11,9 @@ import (
 	"os/signal"
 
 	"protomorphine/tg-notes/internal/bot/handlers"
-	"protomorphine/tg-notes/internal/bot/handlers/help"
 	"protomorphine/tg-notes/internal/config"
 	"protomorphine/tg-notes/internal/log"
 	"protomorphine/tg-notes/internal/storage/git"
-
-	"github.com/go-telegram/bot"
 )
 
 type CLIArgs struct {
@@ -24,11 +21,15 @@ type CLIArgs struct {
 }
 
 func main() {
-	args := mustParseAndValidateCLIArgs()
+	args, err := parseAndValidateCLIArgs()
+	if err != nil {
+		slog.Error("error while parsing CLI args")
+		os.Exit(1)
+	}
 
 	cfg, err := config.Load(args.configPath)
 	if err != nil {
-		slog.Error("error occured while loading config", slog.Any("err", err))
+		slog.Error("error while loading config", slog.Any("err", err))
 		os.Exit(1)
 	}
 
@@ -52,13 +53,11 @@ func main() {
 
 	b, err := newBot(logger, &cfg.Bot, handlers.NewDefault(logger, storage))
 	if err != nil {
-		logger.Error("unable to initialize bot", log.Err(err))
+		logger.Error("error while Telegram bot initialization", log.Err(err))
 		os.Exit(1)
 	}
 
 	logger.Info("successfully authorized in telegram api")
-
-	b.RegisterHandler(bot.HandlerTypeMessageText, help.Cmd, bot.MatchTypeCommand, help.New(logger))
 
 	removeWebhook := mustSetWebhook(ctx, logger, b, cfg.Bot.WebHookURL)
 	defer removeWebhook()
@@ -71,8 +70,8 @@ func main() {
 	go func() {
 		logger.Info("starting http server", slog.String("address", server.Addr))
 
-		if err := server.ListenAndServe(); err != http.ErrServerClosed {
-			logger.Error("error occured while running http server", log.Err(err))
+		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			logger.Error("error while running http server", log.Err(err))
 		}
 
 		logger.Info("http server stopped")
@@ -83,23 +82,23 @@ func main() {
 	<-ctx.Done()
 
 	if err := server.Shutdown(context.Background()); err != nil {
-		logger.Error("can't shutdown http server gracefully", log.Err(err))
+		logger.Error("error while HTTP server shutdown", log.Err(err))
 	}
 }
 
-func mustParseAndValidateCLIArgs() *CLIArgs {
+func parseAndValidateCLIArgs() (*CLIArgs, error) {
 	configPath := flag.String("config", "", "path to config file")
 
 	flag.Parse()
 
 	// check if config path is not empty and file exists
 	if *configPath == "" {
-		panic(errors.New("config path shouldn't be empty"))
+		return nil, errors.New("config path shouldn't be empty")
 	}
 
 	if _, err := os.Stat(*configPath); os.IsNotExist(err) {
-		panic(fmt.Errorf("file does not exists: %s", *configPath))
+		return nil, fmt.Errorf("file does not exists: %s", *configPath)
 	}
 
-	return &CLIArgs{configPath: *configPath}
+	return &CLIArgs{configPath: *configPath}, nil
 }

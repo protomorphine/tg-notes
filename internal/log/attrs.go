@@ -1,6 +1,9 @@
+// Package log provides usefull utiities for slog
 package log
 
-import "log/slog"
+import (
+	"log/slog"
+)
 
 func Err(err error) slog.Attr {
 	return slog.Attr{
