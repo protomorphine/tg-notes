@@ -44,7 +44,7 @@ func TestEmptyMessageText(t *testing.T) {
 	adder := mocks.NewNoteAdder(t)
 	sender := mocks.NewMessageSender(t)
 
-	adder.EXPECT().Add(mock.Anything, "valid caption").Return(nil)
+	adder.EXPECT().Add(t.Context(), mock.Anything, "valid caption").Return(nil)
 	sender.EXPECT().SendMessage(t.Context(), mock.Anything).Return(nil, nil)
 
 	logger := slog.New(log.NewDiscardHandler())
@@ -87,7 +87,7 @@ func TestAddNote(t *testing.T) {
 			},
 
 			adderSetup: func(adder *mocks.NoteAdder) {
-				adder.EXPECT().Add(mock.Anything, "some text").Return(nil)
+				adder.EXPECT().Add(mock.Anything, mock.Anything, "some text").Return(nil)
 			},
 		},
 		{
@@ -100,7 +100,7 @@ func TestAddNote(t *testing.T) {
 			},
 
 			adderSetup: func(adder *mocks.NoteAdder) {
-				adder.EXPECT().Add(mock.Anything, "some caption").Return(nil)
+				adder.EXPECT().Add(mock.Anything, mock.Anything, "some caption").Return(nil)
 			},
 		},
 		{
@@ -113,7 +113,7 @@ func TestAddNote(t *testing.T) {
 			},
 
 			adderSetup: func(adder *mocks.NoteAdder) {
-				adder.EXPECT().Add(mock.Anything, "some caption").Return(errors.New("internal adder error"))
+				adder.EXPECT().Add(mock.Anything, mock.Anything, "some caption").Return(errors.New("internal adder error"))
 			},
 		},
 	}

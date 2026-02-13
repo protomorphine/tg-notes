@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	"context"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -36,16 +37,16 @@ func (_m *NoteAdder) EXPECT() *NoteAdder_Expecter {
 }
 
 // Add provides a mock function for the type NoteAdder
-func (_mock *NoteAdder) Add(title string, text string) error {
-	ret := _mock.Called(title, text)
+func (_mock *NoteAdder) Add(ctx context.Context, title string, text string) error {
+	ret := _mock.Called(ctx, title, text)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Add")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, string) error); ok {
-		r0 = returnFunc(title, text)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = returnFunc(ctx, title, text)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -58,25 +59,31 @@ type NoteAdder_Add_Call struct {
 }
 
 // Add is a helper method to define mock.On call
+//   - ctx context.Context
 //   - title string
 //   - text string
-func (_e *NoteAdder_Expecter) Add(title interface{}, text interface{}) *NoteAdder_Add_Call {
-	return &NoteAdder_Add_Call{Call: _e.mock.On("Add", title, text)}
+func (_e *NoteAdder_Expecter) Add(ctx interface{}, title interface{}, text interface{}) *NoteAdder_Add_Call {
+	return &NoteAdder_Add_Call{Call: _e.mock.On("Add", ctx, title, text)}
 }
 
-func (_c *NoteAdder_Add_Call) Run(run func(title string, text string)) *NoteAdder_Add_Call {
+func (_c *NoteAdder_Add_Call) Run(run func(ctx context.Context, title string, text string)) *NoteAdder_Add_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(context.Context)
 		}
 		var arg1 string
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -87,7 +94,7 @@ func (_c *NoteAdder_Add_Call) Return(err error) *NoteAdder_Add_Call {
 	return _c
 }
 
-func (_c *NoteAdder_Add_Call) RunAndReturn(run func(title string, text string) error) *NoteAdder_Add_Call {
+func (_c *NoteAdder_Add_Call) RunAndReturn(run func(ctx context.Context, title string, text string) error) *NoteAdder_Add_Call {
 	_c.Call.Return(run)
 	return _c
 }
