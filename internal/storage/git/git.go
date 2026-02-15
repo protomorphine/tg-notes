@@ -53,13 +53,13 @@ func New(cfg *config.GitRepository) (*GitStorage, error) {
 			URL:  cfg.URL,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", op, err)
+			return nil, fmt.Errorf("%s: clone error: %w", op, err)
 		}
 	}
 
 	worktree, err := repo.Worktree()
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: getting worktree error: %w", op, err)
 	}
 
 	// refs/heads/<cfg.Branch>
@@ -79,7 +79,7 @@ func New(cfg *config.GitRepository) (*GitStorage, error) {
 	// https://github.com/go-git/go-git/issues/279#issuecomment-816359799
 	newReference := plumbing.NewSymbolicReference(localBranch, remoteBranch)
 	if err := repo.Storer.SetReference(newReference); err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: set reference error: %w", op, err)
 	}
 
 	_, err = repo.Branch(cfg.Branch)
@@ -90,7 +90,7 @@ func New(cfg *config.GitRepository) (*GitStorage, error) {
 	}
 
 	if err := worktree.Checkout(checkoutOpts); err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return nil, fmt.Errorf("%s: checkout error %w", op, err)
 	}
 
 	return &GitStorage{
@@ -112,7 +112,7 @@ func (g *GitStorage) Add(ctx context.Context, title, text string) error {
 
 	path, err := g.createFile(title+".md", text)
 	if err != nil {
-		return fmt.Errorf("%s: error while saving file: %w", op, err)
+		return fmt.Errorf("%s: file save error: %w", op, err)
 	}
 
 	g.buf = append(g.buf, path)
@@ -199,17 +199,17 @@ func (g *GitStorage) handlePendingNotes(ctx context.Context) (int, error) {
 	g.mu.Unlock()
 
 	if err := g.prepareStorage(ctx); err != nil {
-		return 0, fmt.Errorf("%s: error while preparing storage: %w", op, err)
+		return 0, fmt.Errorf("%s: prepare storage error: %w", op, err)
 	}
 
 	for _, path := range buf {
 		if _, err := g.worktree.Add(path); err != nil {
-			return 0, fmt.Errorf("%s: error while add file %s to worktree: %w", op, path, err)
+			return 0, fmt.Errorf("%s: add file %s to worktree error: %w", op, path, err)
 		}
 	}
 
 	if err := g.save(ctx); err != nil {
-		return 0, fmt.Errorf("%s: error while saving notes: %w", op, err)
+		return 0, fmt.Errorf("%s: save notes error: %w", op, err)
 	}
 
 	return len(buf), nil
