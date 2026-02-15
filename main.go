@@ -51,7 +51,7 @@ func main() {
 
 	go storage.Processor(ctx, logger)
 
-	b, err := newBot(logger, &cfg.Bot, handlers.NewDefault(logger, storage))
+	b, err := newBot(logger, &cfg.Bot, handlers.NewNoteSaving(logger, storage))
 	if err != nil {
 		logger.Error("error while Telegram bot initialization", log.Err(err))
 		os.Exit(1)

@@ -36,9 +36,9 @@ type MessageSender interface {
 	SendMessage(ctx context.Context, params *bot.SendMessageParams) (*models.Message, error)
 }
 
-type DefaultHandler func(ctx context.Context, sender MessageSender, update *models.Update)
+type NoteSavingHandler func(ctx context.Context, sender MessageSender, update *models.Update)
 
-func NewDefault(logger *slog.Logger, adder NoteAdder) DefaultHandler {
+func NewNoteSaving(logger *slog.Logger, adder NoteAdder) NoteSavingHandler {
 	return func(ctx context.Context, sender MessageSender, update *models.Update) {
 		const op = "bot.handlers.add"
 		logger := logger.With(log.Op(op), slog.String("reqID", middleware.GetReqID(ctx).String()))

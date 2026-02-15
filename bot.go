@@ -18,7 +18,7 @@ import (
 
 type webhookRemoveFunc func()
 
-func newBot(logger *slog.Logger, cfg *config.BotConfig, defaultHandler handlers.DefaultHandler) (*bot.Bot, error) {
+func newBot(logger *slog.Logger, cfg *config.BotConfig, defaultHandler handlers.NoteSavingHandler) (*bot.Bot, error) {
 	opts := []bot.Option{
 		bot.WithErrorsHandler(botlog.NewErrorHandler(logger)),
 		bot.WithDefaultHandler(wrapHandler(defaultHandler)),
@@ -49,7 +49,7 @@ func newBot(logger *slog.Logger, cfg *config.BotConfig, defaultHandler handlers.
 	return b, nil
 }
 
-func wrapHandler(handler handlers.DefaultHandler) bot.HandlerFunc {
+func wrapHandler(handler handlers.NoteSavingHandler) bot.HandlerFunc {
 	return func(ctx context.Context, bot *bot.Bot, update *models.Update) {
 		handler(ctx, bot, update)
 	}

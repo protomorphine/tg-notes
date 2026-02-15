@@ -20,7 +20,7 @@ func TestNilMessage(t *testing.T) {
 	sender := mocks.NewMessageSender(t)
 
 	logger := slog.New(log.NewDiscardHandler())
-	h := handlers.NewDefault(logger, adder)
+	h := handlers.NewNoteSaving(logger, adder)
 
 	h(t.Context(), sender, update)
 
@@ -48,7 +48,7 @@ func TestEmptyMessageText(t *testing.T) {
 	sender.EXPECT().SendMessage(t.Context(), mock.Anything).Return(nil, nil)
 
 	logger := slog.New(log.NewDiscardHandler())
-	h := handlers.NewDefault(logger, adder)
+	h := handlers.NewNoteSaving(logger, adder)
 
 	h(t.Context(), sender, update)
 }
@@ -67,7 +67,7 @@ func TestTextAndCaptionEmpty(t *testing.T) {
 	sender.EXPECT().SendMessage(t.Context(), mock.Anything).Return(nil, nil)
 
 	logger := slog.New(log.NewDiscardHandler())
-	h := handlers.NewDefault(logger, adder)
+	h := handlers.NewNoteSaving(logger, adder)
 
 	h(t.Context(), sender, update)
 }
@@ -130,7 +130,7 @@ func TestAddNote(t *testing.T) {
 			sender.EXPECT().SendMessage(t.Context(), mock.Anything).Return(nil, nil)
 
 			logger := slog.New(log.NewDiscardHandler())
-			h := handlers.NewDefault(logger, adder)
+			h := handlers.NewNoteSaving(logger, adder)
 
 			h(t.Context(), sender, tc.update)
 		})
