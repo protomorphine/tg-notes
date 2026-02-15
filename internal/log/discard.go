@@ -15,7 +15,7 @@ func (h *discardHandler) Enabled(context.Context, slog.Level) bool {
 	return true
 }
 
-func (h *discardHandler)Handle(context.Context, slog.Record) error {
+func (h *discardHandler) Handle(context.Context, slog.Record) error {
 	return nil
 }
 
