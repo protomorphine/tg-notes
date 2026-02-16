@@ -13,18 +13,47 @@ This is a simple Telegram bot that allows you to save your notes to a Git reposi
 
 ## How it works
 
-The bot uses the `go-telegram/bot` library to interact with the Telegram Bot API. It listens for incoming messages via a webhook.
+The bot provides a fast, asynchronous workflow for saving notes. When a user sends a message, it's immediately saved to a local file on the server, and a "Saved!" confirmation is sent back.
 
-When a message is received, it passes through a series of middlewares:
+A background process then handles the synchronization with the remote Git repository. This ensures that the user experience is fast and responsive, as it doesn't have to wait for slow network operations.
 
-1.  `ReqID`: Assigns a unique request ID to each incoming request for logging and tracing.
-2.  `Recover`: Recovers from panics and logs them.
-3.  `Auth`: Checks if the message is from an authorized user.
-4.  `Log`: Logs information about the incoming request.
+The following diagram illustrates the complete workflow, including the names of the internal components and functions involved.
 
-If the request is authorized, the message is processed by the appropriate handler. The default handler saves the message text as a new note in the Git repository. The notes are temporarily stored in a buffer and are periodically pushed to the remote repository.
-
-The storage backend is implemented using the `go-git/go-git` library. It clones a remote repository, creates new files with the notes, commits them, and pushes them to the remote.
+```
++------+   +----------+   +--------------------+   +--------------+           +-------------------+
+| User |   | Telegram |   | NoteSaving Handler |   |  GitStorage  |           |  Remote Git Repo  |
++------+   +----------+   +--------------------+   +--------------+           +-------------------+
+   |           |                  |                      |                             |
+   |---Note--->|                  |                      |                             |
+   |           |---Webhook------->|                      |                             |
+   |           |                  |                      |                             |
+   |           |                  |----[ Add() ]-------->|                             |
+   |           |                  |                      |--[ createFile() ]           |
+   |           |                  |                      |                             |
+   |           |                  |<---[ Success ]-------|                             |
+   |           |                  |                      |                             |
+   |           |<--Send "Saved!"--|                      |                             |
+   |           |                  |                      |                             |
+   |<--Confirm-|                  |                      |                             |
+   |           |                  |                      |                             |
+...|...........|..................|....................................................|...
+   .           .                  .                      .                             .
+   .           .                  .  BACKGROUND `Processor` JOB                        .
+   .           .                  .                      .                             .
+   |           |                  |                      |   [ 1. Wait for Trigger ]   |
+   |           |                  |                      |    - Timer (Ticker) fires   |
+   |           |                  |                      |    - Note Buffer is full    |
+   |           |                  |                      |                             |
+   |           |                  |                      |---[ 2. prepareStorage() ]-->|
+   |           |                  |                      |      (git pull)             |
+   |           |                  |                      |<----------------------------|
+   |           |                  |                      |                             |
+   |           |                  |                      |-------[ 3. save() ]-------->|
+   |           |                  |                      |        (git commit)         |
+   |           |                  |                      |         (git push)          |
+   |           |                  |                      |---------------------------->|
+   |           |                  |                      |                             |
+```
 
 ## Configuration
 
