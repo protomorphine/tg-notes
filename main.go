@@ -10,7 +10,7 @@ import (
 	"os"
 	"os/signal"
 
-	"protomorphine/tg-notes/internal/bot/handlers"
+	"protomorphine/tg-notes/internal/bot/handlers/notesaving"
 	"protomorphine/tg-notes/internal/config"
 	"protomorphine/tg-notes/internal/log"
 	"protomorphine/tg-notes/internal/storage/git"
@@ -51,7 +51,7 @@ func main() {
 
 	go storage.Processor(ctx, logger)
 
-	b, err := newBot(logger, &cfg.Bot, handlers.NewNoteSaving(logger, storage))
+	b, err := newBot(logger, &cfg.Bot, notesaving.New(logger, storage))
 	if err != nil {
 		logger.Error("error while Telegram bot initialization", log.Err(err))
 		os.Exit(1)
@@ -59,7 +59,10 @@ func main() {
 
 	logger.Info("successfully authorized in telegram api")
 
-	removeWebhook := mustSetWebhook(ctx, logger, b, cfg.Bot.WebHookURL)
+	removeWebhook, err := setWebhook(ctx, logger, b, cfg.Bot.WebHookURL)
+	if err != nil {
+		logger.Error("error while setting up webhook", log.Err(err))
+	}
 	defer removeWebhook()
 
 	server := &http.Server{

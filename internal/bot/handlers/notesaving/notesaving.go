@@ -1,5 +1,5 @@
-// Package handlers provides default handler for bot
-package handlers
+// Package notesaving provides default handler for bot
+package notesaving
 
 import (
 	"context"
@@ -36,9 +36,9 @@ type MessageSender interface {
 	SendMessage(ctx context.Context, params *bot.SendMessageParams) (*models.Message, error)
 }
 
-type NoteSavingHandler func(ctx context.Context, sender MessageSender, update *models.Update)
+type Handler func(ctx context.Context, sender MessageSender, update *models.Update)
 
-func NewNoteSaving(logger *slog.Logger, adder NoteAdder) NoteSavingHandler {
+func New(logger *slog.Logger, adder NoteAdder) Handler {
 	return func(ctx context.Context, sender MessageSender, update *models.Update) {
 		const op = "bot.handlers.add"
 		logger := logger.With(log.Op(op), slog.String("reqID", middleware.GetReqID(ctx).String()))

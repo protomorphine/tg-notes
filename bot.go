@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"protomorphine/tg-notes/internal/bot/handlers"
 	"protomorphine/tg-notes/internal/bot/handlers/help"
+	"protomorphine/tg-notes/internal/bot/handlers/notesaving"
 	"protomorphine/tg-notes/internal/bot/middleware"
 	"protomorphine/tg-notes/internal/config"
 	"protomorphine/tg-notes/internal/log"
@@ -18,7 +18,7 @@ import (
 
 type webhookRemoveFunc func()
 
-func newBot(logger *slog.Logger, cfg *config.BotConfig, defaultHandler handlers.NoteSavingHandler) (*bot.Bot, error) {
+func newBot(logger *slog.Logger, cfg *config.BotConfig, defaultHandler notesaving.Handler) (*bot.Bot, error) {
 	opts := []bot.Option{
 		bot.WithErrorsHandler(botlog.NewErrorHandler(logger)),
 		bot.WithDefaultHandler(wrapHandler(defaultHandler)),
@@ -49,16 +49,16 @@ func newBot(logger *slog.Logger, cfg *config.BotConfig, defaultHandler handlers.
 	return b, nil
 }
 
-func wrapHandler(handler handlers.NoteSavingHandler) bot.HandlerFunc {
+func wrapHandler(handler notesaving.Handler) bot.HandlerFunc {
 	return func(ctx context.Context, bot *bot.Bot, update *models.Update) {
 		handler(ctx, bot, update)
 	}
 }
 
-func mustSetWebhook(ctx context.Context, logger *slog.Logger, b *bot.Bot, webhookURL string) webhookRemoveFunc {
+func setWebhook(ctx context.Context, logger *slog.Logger, b *bot.Bot, webhookURL string) (webhookRemoveFunc, error) {
 	_, err := b.SetWebhook(ctx, &bot.SetWebhookParams{URL: webhookURL})
 	if err != nil {
-		panic(fmt.Errorf("error while setting webhook: %v", err))
+		return nil, fmt.Errorf("set webhook error: %w", err)
 	}
 
 	return func() {
@@ -69,5 +69,5 @@ func mustSetWebhook(ctx context.Context, logger *slog.Logger, b *bot.Bot, webhoo
 		}
 
 		logger.Info("webhook was deleted")
-	}
+	}, nil
 }

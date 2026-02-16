@@ -1,12 +1,12 @@
-package handlers_test
+package notesaving_test
 
 import (
 	"errors"
 	"log/slog"
 	"testing"
 
-	"protomorphine/tg-notes/internal/bot/handlers"
-	"protomorphine/tg-notes/internal/bot/handlers/mocks"
+	"protomorphine/tg-notes/internal/bot/handlers/notesaving"
+	"protomorphine/tg-notes/internal/bot/handlers/notesaving/mocks"
 	"protomorphine/tg-notes/internal/log"
 
 	"github.com/go-telegram/bot/models"
@@ -20,7 +20,7 @@ func TestNilMessage(t *testing.T) {
 	sender := mocks.NewMessageSender(t)
 
 	logger := slog.New(log.NewDiscardHandler())
-	h := handlers.NewNoteSaving(logger, adder)
+	h := notesaving.New(logger, adder)
 
 	h(t.Context(), sender, update)
 
@@ -48,7 +48,7 @@ func TestEmptyMessageText(t *testing.T) {
 	sender.EXPECT().SendMessage(t.Context(), mock.Anything).Return(nil, nil)
 
 	logger := slog.New(log.NewDiscardHandler())
-	h := handlers.NewNoteSaving(logger, adder)
+	h := notesaving.New(logger, adder)
 
 	h(t.Context(), sender, update)
 }
@@ -67,7 +67,7 @@ func TestTextAndCaptionEmpty(t *testing.T) {
 	sender.EXPECT().SendMessage(t.Context(), mock.Anything).Return(nil, nil)
 
 	logger := slog.New(log.NewDiscardHandler())
-	h := handlers.NewNoteSaving(logger, adder)
+	h := notesaving.New(logger, adder)
 
 	h(t.Context(), sender, update)
 }
@@ -130,7 +130,7 @@ func TestAddNote(t *testing.T) {
 			sender.EXPECT().SendMessage(t.Context(), mock.Anything).Return(nil, nil)
 
 			logger := slog.New(log.NewDiscardHandler())
-			h := handlers.NewNoteSaving(logger, adder)
+			h := notesaving.New(logger, adder)
 
 			h(t.Context(), sender, tc.update)
 		})
