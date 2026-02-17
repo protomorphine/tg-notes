@@ -23,13 +23,13 @@ type CLIArgs struct {
 func main() {
 	args, err := parseAndValidateCLIArgs()
 	if err != nil {
-		slog.Error("error while parsing CLI args")
+		slog.Error("error while parsing CLI args", log.Err(err))
 		os.Exit(1)
 	}
 
 	cfg, err := config.Load(args.configPath)
 	if err != nil {
-		slog.Error("error while loading config", slog.Any("err", err))
+		slog.Error("error while loading config", log.Err(err))
 		os.Exit(1)
 	}
 
