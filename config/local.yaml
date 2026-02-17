@@ -11,6 +11,7 @@ gitRepository:
   path: "/home/drzaytsev/notes/"
   saveTo: "bot-notes"
   branch: "tg-notes"
+  remoteName: "origin"
   bufSize: 5
   updateDuration: 1m
   committer:

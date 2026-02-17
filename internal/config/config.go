@@ -33,13 +33,18 @@ type HTTPServerConfig struct {
 type GitRepository struct {
 	URL             string        `yaml:"url" env-required:"true"`            // remote repo URL
 	Path            string        `yaml:"path"`                               // local path to clone repo
-	Key             string        `env:"KEY"`                                 // ssh key to access repo
-	KeyPassword     string        `env:"KEY_PASSWD"`                          // password to ssh key
+	Auth            GitAuth       `yaml:"auth"`                               // git authentication config
 	PathToSave      string        `yaml:"saveTo" env-required:"true"`         // path to save notes inside repo
 	Branch          string        `yaml:"branch"`                             // repo working branch
+	RemoteName      string        `yaml:"remoteName" env-default:"origin"`    // git remote name
 	Committer       Committer     `yaml:"committer"`                          // committer info
 	BufSize         int           `yaml:"bufSize" env-required:"true"`        // notes buffer size
 	UpdateDuratiion time.Duration `yaml:"updateDuration" env-required:"true"` // duration to fill buffer; save occurs when buffer is full or last save was specified time ago
+}
+
+type GitAuth struct {
+	Key         string `env:"KEY"`        // ssh key to access repo
+	KeyPassword string `env:"KEY_PASSWD"` // password to ssh key
 }
 
 type Committer struct {

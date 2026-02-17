@@ -11,7 +11,7 @@ This is a simple Telegram bot that allows you to save your notes to a Git reposi
 - Configurable via a YAML file and environment variables.
 - Dockerized for easy deployment.
 
-## How it works
+## How It Works
 
 The bot provides a fast, asynchronous workflow for saving notes. When a user sends a message, it's immediately saved to a local file on the server, and a "Saved!" confirmation is sent back.
 
@@ -77,10 +77,12 @@ httpServer:
 gitRepository:
   url: "git@github.com:user/repo.git" # Should be redefined
   path: "/app/notes"
-  key: "" # Should be redefined via environment variable
-  keyPassword: "" # Should be redefined via environment variable
+  auth:
+    key: "" # Should be redefined via environment variable
+    keyPassword: "" # Should be redefined via environment variable
   saveTo: "notes"
   branch: "main"
+  remoteName: "origin"
   committer:
     name: "tg-notes bot"
   bufSize: 10
@@ -94,7 +96,7 @@ The following environment variables can be used to override the configuration:
 - `KEY`: The SSH private key to access the Git repository.
 - `KEY_PASSWD`: The password for the SSH key.
 
-## Installation and usage
+## Installation and Usage
 
 The application can be built and run using Docker.
 

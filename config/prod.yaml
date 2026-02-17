@@ -10,5 +10,6 @@ gitRepository:
   url: "git@github.com:protomorphine/notes.git"
   saveTo: "tg-notes"
   branch: "tg-notes"
+  remoteName: "origin"
   committer:
     name: "tg-notes-bot"

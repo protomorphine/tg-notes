@@ -41,7 +41,7 @@ type GitStorage struct {
 func New(cfg *config.GitRepository) (*GitStorage, error) {
 	const op = "storage.git.New"
 
-	publicKeys, err := ssh.NewPublicKeys("git", []byte(cfg.Key), cfg.KeyPassword)
+	publicKeys, err := ssh.NewPublicKeys("git", []byte(cfg.Auth.Key), cfg.Auth.KeyPassword)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -64,14 +64,14 @@ func New(cfg *config.GitRepository) (*GitStorage, error) {
 
 	// refs/heads/<cfg.Branch>
 	localBranch := plumbing.NewBranchReferenceName(cfg.Branch)
-	// refs/remotes/origin/<cfg.Branch>
-	remoteBranch := plumbing.NewRemoteReferenceName("origin", cfg.Branch)
+	// refs/remotes/<cfg.RemoteName>/<cfg.Branch>
+	remoteBranch := plumbing.NewRemoteReferenceName(cfg.RemoteName, cfg.Branch)
 
 	// go-git do not see an existing branch by default
 	// so we need to add it manually
 	_ = repo.CreateBranch(&gitCfg.Branch{
 		Name:   cfg.Branch,
-		Remote: "origin",
+		Remote: cfg.RemoteName,
 		Merge:  localBranch,
 	})
 
@@ -242,12 +242,12 @@ func (g *GitStorage) save(ctx context.Context) error {
 
 	return g.repo.PushContext(ctx, &git.PushOptions{
 		Auth:       g.pubKey,
-		RemoteName: "origin",
+		RemoteName: g.config.RemoteName,
 	})
 }
 
 func (g *GitStorage) prepareStorage(ctx context.Context) error {
-	pullOpts := &git.PullOptions{RemoteName: "origin", Auth: g.pubKey, Force: true}
+	pullOpts := &git.PullOptions{RemoteName: g.config.RemoteName, Auth: g.pubKey, Force: true}
 	if err := g.worktree.PullContext(ctx, pullOpts); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
 		return err
 	}
