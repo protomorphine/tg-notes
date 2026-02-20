@@ -2,12 +2,15 @@
 package git
 
 import (
+	"bytes"
 	"context"
+	"embed"
 	"errors"
 	"fmt"
 	"log/slog"
 	"path"
 	"sync"
+	"text/template"
 	"time"
 
 	"protomorphine/tg-notes/internal/config"
@@ -20,9 +23,12 @@ import (
 	"github.com/go-git/go-git/v6/plumbing/transport/ssh"
 )
 
-const commitMsg string = "note from tg-notes"
+var (
+	//go:embed resources
+	templates embed.FS
 
-var noErrNothingToDo error = errors.New("nothing to do")
+	noErrNothingToDo error = errors.New("nothing to do")
+)
 
 type GitStorage struct {
 	worktree *git.Worktree
@@ -208,11 +214,13 @@ func (g *GitStorage) handlePendingNotes(ctx context.Context) (int, error) {
 		}
 	}
 
-	if err := g.save(ctx); err != nil {
+	notesCount := len(buf)
+
+	if err := g.save(ctx, notesCount); err != nil {
 		return 0, fmt.Errorf("%s: save notes error: %w", op, err)
 	}
 
-	return len(buf), nil
+	return notesCount, nil
 }
 
 func (g *GitStorage) createFile(filename, content string) (string, error) {
@@ -228,7 +236,14 @@ func (g *GitStorage) createFile(filename, content string) (string, error) {
 	return path, err
 }
 
-func (g *GitStorage) save(ctx context.Context) error {
+func (g *GitStorage) save(ctx context.Context, notesCount int) error {
+	const op = "storage.git.save"
+
+	commitMsg, err := createCommitMsg(notesCount)
+	if err != nil {
+		return fmt.Errorf("%s: error while generating commit message: %w", op, err)
+	}
+
 	commitOpts := &git.CommitOptions{
 		Committer: &object.Signature{
 			Name: g.config.Committer.Name,
@@ -237,19 +252,50 @@ func (g *GitStorage) save(ctx context.Context) error {
 	}
 
 	if _, err := g.worktree.Commit(commitMsg, commitOpts); err != nil {
-		return err
+		return fmt.Errorf("%s: error while commiting changes: %w", op, err)
 	}
 
-	return g.repo.PushContext(ctx, &git.PushOptions{
+	err = g.repo.PushContext(ctx, &git.PushOptions{
 		Auth:       g.pubKey,
 		RemoteName: g.config.RemoteName,
 	})
+	if err != nil {
+		return fmt.Errorf("%s: error while pushing changes to remote: %w", op, err)
+	}
+
+	return nil
+}
+
+func createCommitMsg(notesCount int) (string, error) {
+	tmpl, err := template.ParseFS(templates, "resources/commit_message.tmpl")
+	if err != nil {
+		return "", err
+	}
+
+	type templateVars struct {
+		NotesCount int
+		Time       time.Time
+	}
+
+	vars := templateVars{
+		NotesCount: notesCount,
+		Time:       time.Now(),
+	}
+
+	buf := &bytes.Buffer{}
+	if err := tmpl.Execute(buf, vars); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
 
 func (g *GitStorage) prepareStorage(ctx context.Context) error {
+	const op = "storage.git.prepareStorage"
+
 	pullOpts := &git.PullOptions{RemoteName: g.config.RemoteName, Auth: g.pubKey, Force: true}
 	if err := g.worktree.PullContext(ctx, pullOpts); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
-		return err
+		return fmt.Errorf("%s: error while pull changes from remote: %w", op, err)
 	}
 
 	return nil
