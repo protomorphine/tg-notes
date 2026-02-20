@@ -39,7 +39,7 @@ type Handler func(ctx context.Context, sender MessageSender, update *models.Upda
 func New(logger *slog.Logger, saver *notesaving.Usecase) Handler {
 	return func(ctx context.Context, sender MessageSender, update *models.Update) {
 		const op = "bot.handlers.add"
-		logger := logger.With(log.Op(op), slog.String("reqID", middleware.GetReqID(ctx).String()))
+		logger := logger.With(log.Op(op), log.ReqID(middleware.GetReqID(ctx)))
 
 		if update.Message == nil {
 			logger.Error("empty message received")

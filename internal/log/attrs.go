@@ -3,6 +3,8 @@ package log
 
 import (
 	"log/slog"
+
+	"github.com/google/uuid"
 )
 
 // Err creates a slog attribute for an error.
@@ -18,5 +20,13 @@ func Op(op string) slog.Attr {
 	return slog.Attr{
 		Key:   "op",
 		Value: slog.StringValue(op),
+	}
+}
+
+// ReqID creates a slog attribute for a request ID.
+func ReqID(id uuid.UUID) slog.Attr {
+	return slog.Attr{
+		Key:   "reqID",
+		Value: slog.StringValue(id.String()),
 	}
 }

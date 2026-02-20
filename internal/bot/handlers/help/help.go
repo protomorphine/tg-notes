@@ -25,7 +25,7 @@ func New(logger *slog.Logger) bot.HandlerFunc {
 		const op = "bot.handlers.help"
 		logger := logger.With(
 			log.Op(op),
-			slog.String("reqID", middleware.GetReqID(ctx).String()),
+			log.ReqID(middleware.GetReqID(ctx)),
 		)
 
 		_, err := b.SendMessage(ctx, &bot.SendMessageParams{
