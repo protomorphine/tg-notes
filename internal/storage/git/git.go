@@ -30,6 +30,7 @@ var (
 	noErrNothingToDo error = errors.New("nothing to do")
 )
 
+// GitStorage represents a Git-backed storage for notes.
 type GitStorage struct {
 	worktree *git.Worktree
 	repo     *git.Repository
@@ -43,7 +44,8 @@ type GitStorage struct {
 	bufFullCh chan struct{}
 }
 
-// New creates instance of GitStorage
+// New creates a new instance of GitStorage. It clones the repository if it doesn't exist
+// and sets up the worktree.
 func New(cfg *config.GitRepository) (*GitStorage, error) {
 	const op = "storage.git.New"
 
@@ -109,7 +111,8 @@ func New(cfg *config.GitRepository) (*GitStorage, error) {
 	}, nil
 }
 
-// Add adds new note to storage
+// Add adds a new note to the storage. The note is buffered and saved
+// to the Git repository by the Processor.
 func (g *GitStorage) Add(ctx context.Context, title, text string) error {
 	const op = "storage.git.Add"
 
@@ -133,7 +136,8 @@ func (g *GitStorage) Add(ctx context.Context, title, text string) error {
 	return nil
 }
 
-// Processor starts update remote loop
+// Processor starts a background goroutine that periodically commits and pushes
+// buffered notes to the remote Git repository.
 func (g *GitStorage) Processor(ctx context.Context, logger *slog.Logger) {
 	const op = "storage.git.Processor"
 	logger = logger.With(log.Op(op))

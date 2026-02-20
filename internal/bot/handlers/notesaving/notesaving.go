@@ -25,13 +25,17 @@ var (
 	emptyMessageMsg string
 )
 
+// MessageSender is an interface for sending messages.
+//
 //mockery:generate: true
 type MessageSender interface {
 	SendMessage(ctx context.Context, params *bot.SendMessageParams) (*models.Message, error)
 }
 
+// Handler represents the notesaving handler for the bot.
 type Handler func(ctx context.Context, sender MessageSender, update *models.Update)
 
+// New creates a new notesaving Handler.
 func New(logger *slog.Logger, saver *notesaving.Usecase) Handler {
 	return func(ctx context.Context, sender MessageSender, update *models.Update) {
 		const op = "bot.handlers.add"

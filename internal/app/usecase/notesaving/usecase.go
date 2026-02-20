@@ -7,21 +7,26 @@ import (
 	"time"
 )
 
+// NoteAdder is an interface for adding a note.
+//
 //mockery:generate: true
 type NoteAdder interface {
 	Add(ctx context.Context, title, text string) error
 }
 
+// Usecase represents the usecase for saving notes.
 type Usecase struct {
 	adder NoteAdder
 }
 
+// New creates a new Usecase.
 func New(adder NoteAdder) *Usecase {
 	return &Usecase{
 		adder: adder,
 	}
 }
 
+// Save saves a new note.
 func (u *Usecase) Save(ctx context.Context, text string) error {
 	const op = "app.usecase.notesaving.Save"
 

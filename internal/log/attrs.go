@@ -5,6 +5,7 @@ import (
 	"log/slog"
 )
 
+// Err creates a slog attribute for an error.
 func Err(err error) slog.Attr {
 	return slog.Attr{
 		Key:   "error",
@@ -12,6 +13,7 @@ func Err(err error) slog.Attr {
 	}
 }
 
+// Op creates a slog attribute for an operation.
 func Op(op string) slog.Attr {
 	return slog.Attr{
 		Key:   "op",

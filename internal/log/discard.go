@@ -7,6 +7,8 @@ import (
 
 type discardHandler struct{}
 
+// NewDiscardHandler creates a new slog.Handler that discards all log messages.
+// This handler is primarily used for testing purposes.
 func NewDiscardHandler() slog.Handler {
 	return &discardHandler{}
 }

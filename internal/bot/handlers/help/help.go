@@ -13,11 +13,13 @@ import (
 	"github.com/go-telegram/bot/models"
 )
 
+// Cmd is the command string for the help handler.
 const Cmd = "help"
 
 //go:embed resources/help.tmpl
 var helpText string
 
+// New creates a new help Handler.
 func New(logger *slog.Logger) bot.HandlerFunc {
 	return func(ctx context.Context, b *bot.Bot, update *models.Update) {
 		const op = "bot.handlers.help"

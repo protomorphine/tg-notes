@@ -1,4 +1,4 @@
-// Package config provides config    types and methods to configure application
+// Package config provides config types and methods to configure application
 package config
 
 import (
@@ -7,6 +7,7 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
+// Config represents the application's configuration.
 type Config struct {
 	Environment   string           `yaml:"environment" env-default:"prod"` // current environment
 	Logger        LoggerConfig     `yaml:"logger"`                         // logger configuration
@@ -15,6 +16,7 @@ type Config struct {
 	GitRepository GitRepository    `yaml:"gitRepository"`                  // git repository configuration
 }
 
+// BotConfig represents the Telegram bot's configuration.
 type BotConfig struct {
 	Key           string        `env:"TG_API_KEY" env-required:"true"`                    // bot API key
 	InitTimeout   time.Duration `yaml:"initTimeout" env-default:"1m"`                     // bot init timeout
@@ -22,14 +24,17 @@ type BotConfig struct {
 	AllowedUserID int64         `yaml:"allowedUserID"`                                    // user ID, which allowed to perform actions
 }
 
+// LoggerConfig represents the logger's configuration.
 type LoggerConfig struct {
 	MinLevel string `yaml:"minLevel" env-default:"INFO"` // minimal log level
 }
 
+// HTTPServerConfig represents the HTTP server's configuration.
 type HTTPServerConfig struct {
 	Addr string `yaml:"addr" env-default:":80"` // address to bind
 }
 
+// GitRepository represents the Git repository's configuration.
 type GitRepository struct {
 	URL             string        `yaml:"url" env-required:"true"`            // remote repo URL
 	Path            string        `yaml:"path"`                               // local path to clone repo
@@ -42,15 +47,18 @@ type GitRepository struct {
 	UpdateDuratiion time.Duration `yaml:"updateDuration" env-required:"true"` // duration to fill buffer; save occurs when buffer is full or last save was specified time ago
 }
 
+// GitAuth represents the Git authentication configuration.
 type GitAuth struct {
 	Key         string `env:"KEY"`        // ssh key to access repo
 	KeyPassword string `env:"KEY_PASSWD"` // password to ssh key
 }
 
+// Committer represents the committer's information.
 type Committer struct {
 	Name string `yaml:"name"` // commiter name
 }
 
+// Load loads the configuration from the given path.
 func Load(configPath string) (*Config, error) {
 	var config Config
 
