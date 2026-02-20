@@ -4,10 +4,9 @@ package notesaving
 import (
 	"context"
 	_ "embed"
-	"fmt"
 	"log/slog"
-	"time"
 
+	"protomorphine/tg-notes/internal/app/usecase/notesaving"
 	"protomorphine/tg-notes/internal/bot/middleware"
 	"protomorphine/tg-notes/internal/log"
 
@@ -27,18 +26,13 @@ var (
 )
 
 //mockery:generate: true
-type NoteAdder interface {
-	Add(ctx context.Context, title, text string) error
-}
-
-//mockery:generate: true
 type MessageSender interface {
 	SendMessage(ctx context.Context, params *bot.SendMessageParams) (*models.Message, error)
 }
 
 type Handler func(ctx context.Context, sender MessageSender, update *models.Update)
 
-func New(logger *slog.Logger, adder NoteAdder) Handler {
+func New(logger *slog.Logger, saver *notesaving.Usecase) Handler {
 	return func(ctx context.Context, sender MessageSender, update *models.Update) {
 		const op = "bot.handlers.add"
 		logger := logger.With(log.Op(op), slog.String("reqID", middleware.GetReqID(ctx).String()))
@@ -64,9 +58,7 @@ func New(logger *slog.Logger, adder NoteAdder) Handler {
 			}
 		}
 
-		title := fmt.Sprintf("tg-notes bot %v", time.Now().Format(time.DateTime))
-
-		if err := adder.Add(ctx, title, text); err != nil {
+		if err := saver.Save(ctx, text); err != nil {
 			logger.Error("error occured while saving new note", log.Err(err))
 			sendMessage(ctx, logger, sender, chatID, messageID, saveErrMsg)
 

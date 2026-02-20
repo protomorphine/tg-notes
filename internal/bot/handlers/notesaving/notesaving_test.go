@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"testing"
 
+	notesavingUC "protomorphine/tg-notes/internal/app/usecase/notesaving"
+	notesavingUCmocks "protomorphine/tg-notes/internal/app/usecase/notesaving/mocks"
 	"protomorphine/tg-notes/internal/bot/handlers/notesaving"
 	"protomorphine/tg-notes/internal/bot/handlers/notesaving/mocks"
 	"protomorphine/tg-notes/internal/log"
@@ -16,21 +18,17 @@ import (
 func TestNilMessage(t *testing.T) {
 	update := &models.Update{Message: nil}
 
-	adder := mocks.NewNoteAdder(t)
+	adder := notesavingUCmocks.NewNoteAdder(t)
+	usecase := notesavingUC.New(adder)
 	sender := mocks.NewMessageSender(t)
 
 	logger := slog.New(log.NewDiscardHandler())
-	h := notesaving.New(logger, adder)
+	h := notesaving.New(logger, usecase)
 
 	h(t.Context(), sender, update)
 
-	if !adder.AssertNotCalled(t, "Add", mock.Anything, mock.Anything) {
-		t.Error("adder.Add called when message is nil")
-	}
-
-	if !sender.AssertNotCalled(t, "SendMessage", mock.Anything, mock.Anything) {
-		t.Error("sender.SendMessage called when message is nil")
-	}
+	adder.AssertNotCalled(t, "Add", mock.Anything, mock.Anything, mock.Anything)
+	sender.AssertNotCalled(t, "SendMessage", mock.Anything, mock.Anything)
 }
 
 func TestEmptyMessageText(t *testing.T) {
@@ -41,16 +39,20 @@ func TestEmptyMessageText(t *testing.T) {
 		},
 	}
 
-	adder := mocks.NewNoteAdder(t)
+	adder := notesavingUCmocks.NewNoteAdder(t)
+	usecase := notesavingUC.New(adder)
 	sender := mocks.NewMessageSender(t)
 
-	adder.EXPECT().Add(t.Context(), mock.Anything, "valid caption").Return(nil)
-	sender.EXPECT().SendMessage(t.Context(), mock.Anything).Return(nil, nil)
+	adder.EXPECT().Add(mock.Anything, mock.AnythingOfType("string"), "valid caption").Return(nil)
+	sender.EXPECT().SendMessage(mock.Anything, mock.Anything).Return(nil, nil)
 
 	logger := slog.New(log.NewDiscardHandler())
-	h := notesaving.New(logger, adder)
+	h := notesaving.New(logger, usecase)
 
 	h(t.Context(), sender, update)
+
+	adder.AssertExpectations(t)
+	sender.AssertExpectations(t)
 }
 
 func TestTextAndCaptionEmpty(t *testing.T) {
@@ -61,22 +63,26 @@ func TestTextAndCaptionEmpty(t *testing.T) {
 		},
 	}
 
-	adder := mocks.NewNoteAdder(t)
+	adder := notesavingUCmocks.NewNoteAdder(t)
+	usecase := notesavingUC.New(adder)
 	sender := mocks.NewMessageSender(t)
 
-	sender.EXPECT().SendMessage(t.Context(), mock.Anything).Return(nil, nil)
+	sender.EXPECT().SendMessage(mock.Anything, mock.Anything).Return(nil, nil)
 
 	logger := slog.New(log.NewDiscardHandler())
-	h := notesaving.New(logger, adder)
+	h := notesaving.New(logger, usecase)
 
 	h(t.Context(), sender, update)
+
+	sender.AssertExpectations(t)
+	adder.AssertNotCalled(t, "Add", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestAddNote(t *testing.T) {
 	tests := []struct {
 		name       string
 		update     *models.Update
-		adderSetup func(*mocks.NoteAdder)
+		adderSetup func(*notesavingUCmocks.NoteAdder)
 	}{
 		{
 			name: "message text is not empty",
@@ -85,35 +91,31 @@ func TestAddNote(t *testing.T) {
 					Text: "some text",
 				},
 			},
-
-			adderSetup: func(adder *mocks.NoteAdder) {
-				adder.EXPECT().Add(mock.Anything, mock.Anything, "some text").Return(nil)
+			adderSetup: func(adder *notesavingUCmocks.NoteAdder) {
+				adder.EXPECT().Add(mock.Anything, mock.AnythingOfType("string"), "some text").Return(nil)
 			},
 		},
 		{
-			name: "message text is empty, caption is empty",
+			name: "message text is empty, caption is not empty",
 			update: &models.Update{
 				Message: &models.Message{
 					Text:    "",
 					Caption: "some caption",
 				},
 			},
-
-			adderSetup: func(adder *mocks.NoteAdder) {
-				adder.EXPECT().Add(mock.Anything, mock.Anything, "some caption").Return(nil)
+			adderSetup: func(adder *notesavingUCmocks.NoteAdder) {
+				adder.EXPECT().Add(mock.Anything, mock.AnythingOfType("string"), "some caption").Return(nil)
 			},
 		},
 		{
-			name: "text is not empty, Add returns err",
+			name: "Add returns err",
 			update: &models.Update{
 				Message: &models.Message{
-					Text:    "",
-					Caption: "some caption",
+					Text: "some text",
 				},
 			},
-
-			adderSetup: func(adder *mocks.NoteAdder) {
-				adder.EXPECT().Add(mock.Anything, mock.Anything, "some caption").Return(errors.New("internal adder error"))
+			adderSetup: func(adder *notesavingUCmocks.NoteAdder) {
+				adder.EXPECT().Add(mock.Anything, mock.AnythingOfType("string"), "some text").Return(errors.New("internal adder error"))
 			},
 		},
 	}
@@ -122,17 +124,21 @@ func TestAddNote(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			adder := mocks.NewNoteAdder(t)
+			adder := notesavingUCmocks.NewNoteAdder(t)
 			tc.adderSetup(adder)
 
+			usecase := notesavingUC.New(adder)
 			sender := mocks.NewMessageSender(t)
 
-			sender.EXPECT().SendMessage(t.Context(), mock.Anything).Return(nil, nil)
+			sender.EXPECT().SendMessage(mock.Anything, mock.Anything).Return(nil, nil)
 
 			logger := slog.New(log.NewDiscardHandler())
-			h := notesaving.New(logger, adder)
+			h := notesaving.New(logger, usecase)
 
 			h(t.Context(), sender, tc.update)
+
+			adder.AssertExpectations(t)
+			sender.AssertExpectations(t)
 		})
 	}
 }

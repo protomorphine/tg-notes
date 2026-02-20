@@ -6,4 +6,5 @@ dir: "{{.InterfaceDir}}/mocks"
 structname: "{{.InterfaceName}}"
 filename: "{{.InterfaceName}}.go"
 packages:
-  protomorphine/tg-notes/internal/bot/handlers:
+  protomorphine/tg-notes/internal/app/usecase/notesaving:
+  protomorphine/tg-notes/internal/bot/handlers/notesaving:

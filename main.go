@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 
+	notesavingUC "protomorphine/tg-notes/internal/app/usecase/notesaving"
 	"protomorphine/tg-notes/internal/bot/handlers/notesaving"
 	"protomorphine/tg-notes/internal/config"
 	"protomorphine/tg-notes/internal/log"
@@ -51,7 +52,9 @@ func main() {
 
 	go storage.Processor(ctx, logger)
 
-	b, err := newBot(logger, &cfg.Bot, notesaving.New(logger, storage))
+	noteSavingUsecase := notesavingUC.New(storage)
+
+	b, err := newBot(logger, &cfg.Bot, notesaving.New(logger, noteSavingUsecase))
 	if err != nil {
 		logger.Error("error while Telegram bot initialization", log.Err(err))
 		os.Exit(1)
