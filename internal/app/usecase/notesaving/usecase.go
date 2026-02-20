@@ -1,3 +1,4 @@
+// Package notesaving provides usecase for saving notes
 package notesaving
 
 import (
