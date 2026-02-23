@@ -4,7 +4,7 @@ formatter: "gofmt"
 include-auto-generated: true
 dir: "{{.InterfaceDir}}/mocks"
 structname: "{{.InterfaceName}}"
-filename: "{{.InterfaceName}}.go"
+filename: "{{.InterfaceName|lower}}.go"
 packages:
   protomorphine/tg-notes/internal/app/usecase/notesaving:
   protomorphine/tg-notes/internal/bot/handlers/notesaving:
