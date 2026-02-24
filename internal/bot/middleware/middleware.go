@@ -1,2 +1,2 @@
-// Package middleware provides middlewares for telegram bot
+// Package middleware provides middleware for telegram bot
 package middleware

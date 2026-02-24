@@ -12,20 +12,20 @@ import (
 
 const component string = "go-telegram/bot"
 
-// NewDebugHandler function    returns new logging handler for Debug level
+// NewDebugHandler returns new logging handler for Debug level
 func NewDebugHandler(logger *slog.Logger) bot.DebugHandler {
 	return func(format string, args ...any) {
-		logger := logger.With(slog.String("compotent", component))
-
-		logger.Debug(fmt.Sprintf(format, args...))
+		logger.
+			With(slog.String("compotent", component)).
+			Debug(fmt.Sprintf(format, args...))
 	}
 }
 
-// NewErrorHandler function    returns new logging handler for Error level
+// NewErrorHandler returns new logging handler for Error level
 func NewErrorHandler(logger *slog.Logger) bot.ErrorsHandler {
 	return func(err error) {
-		logger := logger.With(slog.String("compotent", component))
-
-		logger.Error("error occured", log.Err(err))
+		logger.
+			With(slog.String("compotent", component)).
+			Error("error occured", log.Err(err))
 	}
 }

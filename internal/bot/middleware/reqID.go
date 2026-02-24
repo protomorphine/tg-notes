@@ -10,7 +10,7 @@ import (
 
 type reqIDContextKey struct{}
 
-// GetReqID function    retrieves a request ID from given context.
+// GetReqID retrieves a request ID from given context.
 func GetReqID(ctx context.Context) uuid.UUID {
 	entry := ctx.Value(reqIDContextKey{})
 
@@ -21,7 +21,7 @@ func GetReqID(ctx context.Context) uuid.UUID {
 	return uuid.Nil
 }
 
-// NewReqID function    creates a middleware for enrich context with unique request ID.
+// NewReqID creates middleware for enrich context with unique request ID.
 func NewReqID() bot.Middleware {
 	return func(next bot.HandlerFunc) bot.HandlerFunc {
 		return func(ctx context.Context, b *bot.Bot, update *models.Update) {

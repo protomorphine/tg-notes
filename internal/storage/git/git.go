@@ -150,7 +150,6 @@ func (g *GitStorage) Processor(ctx context.Context, logger *slog.Logger) {
 	for {
 		select {
 		case <-ctx.Done():
-			close(g.bufFullCh)
 			return
 
 		case _, ok := <-g.bufFullCh:

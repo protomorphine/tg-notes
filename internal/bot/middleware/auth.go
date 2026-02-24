@@ -24,7 +24,7 @@ func NewAuth(logger *slog.Logger, cfg *config.BotConfig) bot.Middleware {
 			logger := logger.With(slog.String("reqID", GetReqID(ctx).String()))
 
 			if update.Message == nil {
-				logger.Warn("got nil message in update")
+				logger.Warn("nil message received")
 				return
 			}
 

@@ -1,4 +1,4 @@
-// Package log provides usefull utiities for slog
+// Package log provides use full utiities for slog
 package log
 
 import (

@@ -9,7 +9,7 @@ import (
 	"github.com/go-telegram/bot/models"
 )
 
-// NewLog function    creates a middleware for log incoming requests.
+// NewLog creates middleware for log incoming requests.
 func NewLog(logger *slog.Logger) bot.Middleware {
 	return func(next bot.HandlerFunc) bot.HandlerFunc {
 		logger := logger.With(slog.String("component", "middleware/log"))

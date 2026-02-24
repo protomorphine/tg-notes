@@ -42,7 +42,7 @@ func New(logger *slog.Logger, saver *notesaving.Usecase) Handler {
 		logger := logger.With(log.Op(op), log.ReqID(middleware.GetReqID(ctx)))
 
 		if update.Message == nil {
-			logger.Error("empty message received")
+			logger.Warn("nil message received")
 			return
 		}
 
@@ -55,7 +55,7 @@ func New(logger *slog.Logger, saver *notesaving.Usecase) Handler {
 			text = update.Message.Caption
 
 			if text == "" {
-				logger.Warn("empty message received")
+				logger.Warn("received message with empty text and caption")
 				sendMessage(ctx, logger, sender, chatID, messageID, emptyMessageMsg)
 
 				return
