@@ -75,28 +75,7 @@ func (c *Classifier) Predict(text string) (map[domain.Category]float64, domain.C
 		logPredictions[category] = logProb
 	}
 
-	// Convert log probabilities to linear scale and normalize
-	predictions := make(map[domain.Category]float64)
-	maxLogProb := -math.MaxFloat64
-	for _, logProb := range logPredictions {
-		if logProb > maxLogProb {
-			maxLogProb = logProb
-		}
-	}
-
-	var sumExp float64
-	for category, logProb := range logPredictions {
-		// Subtract maxLogProb for numerical stability (softmax trick)
-		p := math.Exp(logProb - maxLogProb)
-		predictions[category] = p
-		sumExp += p
-	}
-
-	if sumExp > 0 {
-		for category := range predictions {
-			predictions[category] /= sumExp
-		}
-	}
+	predictions := softmaxScale(logPredictions)
 
 	var bestCategory domain.Category
 	maxProb := -1.0
@@ -109,4 +88,24 @@ func (c *Classifier) Predict(text string) (map[domain.Category]float64, domain.C
 	}
 
 	return predictions, bestCategory
+}
+
+// softmaxScale convert log probabilities to linear scale and normalize.
+func softmaxScale(logPredictions map[domain.Category]float64) map[domain.Category]float64 {
+	sumExp := .0
+	predictions := make(map[domain.Category]float64)
+
+	for cat, logProb := range logPredictions {
+		exp := math.Exp(logProb)
+		predictions[cat] = exp
+		sumExp += exp
+	}
+
+	if sumExp > 0 {
+		for category := range predictions {
+			predictions[category] /= sumExp
+		}
+	}
+
+	return predictions
 }
