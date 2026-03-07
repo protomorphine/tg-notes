@@ -14,6 +14,7 @@ type Config struct {
 	Bot           BotConfig        `yaml:"bot"`                            // Telegram bot configuration
 	HTTPServer    HTTPServerConfig `yaml:"httpServer"`                     // HTTP server configuration
 	GitRepository GitRepository    `yaml:"gitRepository"`                  // git repository configuration
+	NoteSave      NoteSaveConfig   `yaml:"noteSave"`                       // note save configuration
 }
 
 // BotConfig represents the Telegram bot's configuration.
@@ -34,12 +35,17 @@ type HTTPServerConfig struct {
 	Addr string `yaml:"addr" env-default:":80"` // address to bind
 }
 
+// NoteSaveConfig represents configuration for saving new notes.
+type NoteSaveConfig struct {
+	DefaultCategory   string  `yaml:"defaultCategory" env-default:"bot-notes"` // default note category
+	CategoryThreshold float64 `yaml:"categoryThreshold"`                       // threshold to use classifier category prediction
+}
+
 // GitRepository represents the Git repository's configuration.
 type GitRepository struct {
 	URL             string        `yaml:"url" env-required:"true"`            // remote repo URL
 	Path            string        `yaml:"path"`                               // local path to clone repo
 	Auth            GitAuth       `yaml:"auth"`                               // git authentication config
-	PathToSave      string        `yaml:"saveTo" env-required:"true"`         // path to save notes inside repo
 	Branch          string        `yaml:"branch"`                             // repo working branch
 	RemoteName      string        `yaml:"remoteName" env-default:"origin"`    // git remote name
 	Committer       Committer     `yaml:"committer"`                          // committer info

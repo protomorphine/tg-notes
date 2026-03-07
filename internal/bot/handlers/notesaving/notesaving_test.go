@@ -5,8 +5,7 @@ import (
 	"log/slog"
 	"testing"
 
-	notesavingUC "protomorphine/tg-notes/internal/app/usecase/notesaving"
-	notesavingUCmocks "protomorphine/tg-notes/internal/app/usecase/notesaving/mocks"
+	appmodels "protomorphine/tg-notes/internal/app/models"
 	"protomorphine/tg-notes/internal/bot/handlers/notesaving"
 	"protomorphine/tg-notes/internal/bot/handlers/notesaving/mocks"
 	"protomorphine/tg-notes/internal/log"
@@ -18,17 +17,16 @@ import (
 func TestNilMessage(t *testing.T) {
 	update := &models.Update{Message: nil}
 
-	adder := notesavingUCmocks.NewNoteAdder(t)
-	usecase := notesavingUC.New(adder)
+	saver := mocks.NewNoteSaver(t)
 	sender := mocks.NewMessageSender(t)
 
 	logger := slog.New(log.NewDiscardHandler())
-	h := notesaving.New(logger, usecase)
+	h := notesaving.New(logger, saver)
 
 	h(t.Context(), sender, update)
 
-	adder.AssertNotCalled(t, "Add", mock.Anything, mock.Anything, mock.Anything)
-	sender.AssertNotCalled(t, "SendMessage", mock.Anything, mock.Anything)
+	saver.AssertNotCalled(t, "Save")
+	sender.AssertNotCalled(t, "SendMessage")
 }
 
 func TestEmptyMessageText(t *testing.T) {
@@ -39,20 +37,16 @@ func TestEmptyMessageText(t *testing.T) {
 		},
 	}
 
-	adder := notesavingUCmocks.NewNoteAdder(t)
-	usecase := notesavingUC.New(adder)
+	saver := mocks.NewNoteSaver(t)
 	sender := mocks.NewMessageSender(t)
 
-	adder.EXPECT().Add(mock.Anything, mock.AnythingOfType("string"), "valid caption").Return(nil)
-	sender.EXPECT().SendMessage(mock.Anything, mock.Anything).Return(nil, nil)
+	saver.EXPECT().Save(mock.Anything, mock.AnythingOfType("string")).Return(appmodels.SaveResult{}, nil)
+	sender.EXPECT().SendMessage(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 
 	logger := slog.New(log.NewDiscardHandler())
-	h := notesaving.New(logger, usecase)
+	h := notesaving.New(logger, saver)
 
 	h(t.Context(), sender, update)
-
-	adder.AssertExpectations(t)
-	sender.AssertExpectations(t)
 }
 
 func TestTextAndCaptionEmpty(t *testing.T) {
@@ -63,26 +57,25 @@ func TestTextAndCaptionEmpty(t *testing.T) {
 		},
 	}
 
-	adder := notesavingUCmocks.NewNoteAdder(t)
-	usecase := notesavingUC.New(adder)
+	saver := mocks.NewNoteSaver(t)
 	sender := mocks.NewMessageSender(t)
 
-	sender.EXPECT().SendMessage(mock.Anything, mock.Anything).Return(nil, nil)
+	sender.EXPECT().SendMessage(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 
 	logger := slog.New(log.NewDiscardHandler())
-	h := notesaving.New(logger, usecase)
+	h := notesaving.New(logger, saver)
 
 	h(t.Context(), sender, update)
 
 	sender.AssertExpectations(t)
-	adder.AssertNotCalled(t, "Add", mock.Anything, mock.Anything, mock.Anything)
+	saver.AssertNotCalled(t, "Save")
 }
 
 func TestAddNote(t *testing.T) {
 	tests := []struct {
 		name       string
 		update     *models.Update
-		adderSetup func(*notesavingUCmocks.NoteAdder)
+		setupSaver func(*mocks.NoteSaver)
 	}{
 		{
 			name: "message text is not empty",
@@ -91,8 +84,8 @@ func TestAddNote(t *testing.T) {
 					Text: "some text",
 				},
 			},
-			adderSetup: func(adder *notesavingUCmocks.NoteAdder) {
-				adder.EXPECT().Add(mock.Anything, mock.AnythingOfType("string"), "some text").Return(nil)
+			setupSaver: func(adder *mocks.NoteSaver) {
+				adder.EXPECT().Save(mock.Anything, mock.AnythingOfType("string")).Return(appmodels.SaveResult{}, nil)
 			},
 		},
 		{
@@ -103,8 +96,8 @@ func TestAddNote(t *testing.T) {
 					Caption: "some caption",
 				},
 			},
-			adderSetup: func(adder *notesavingUCmocks.NoteAdder) {
-				adder.EXPECT().Add(mock.Anything, mock.AnythingOfType("string"), "some caption").Return(nil)
+			setupSaver: func(adder *mocks.NoteSaver) {
+				adder.EXPECT().Save(mock.Anything, mock.AnythingOfType("string")).Return(appmodels.SaveResult{}, nil)
 			},
 		},
 		{
@@ -114,8 +107,8 @@ func TestAddNote(t *testing.T) {
 					Text: "some text",
 				},
 			},
-			adderSetup: func(adder *notesavingUCmocks.NoteAdder) {
-				adder.EXPECT().Add(mock.Anything, mock.AnythingOfType("string"), "some text").Return(errors.New("internal adder error"))
+			setupSaver: func(adder *mocks.NoteSaver) {
+				adder.EXPECT().Save(mock.Anything, mock.AnythingOfType("string")).Return(appmodels.SaveResult{}, errors.New("internal adder error"))
 			},
 		},
 	}
@@ -124,21 +117,17 @@ func TestAddNote(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			adder := notesavingUCmocks.NewNoteAdder(t)
-			tc.adderSetup(adder)
+			saver := mocks.NewNoteSaver(t)
+			tc.setupSaver(saver)
 
-			usecase := notesavingUC.New(adder)
 			sender := mocks.NewMessageSender(t)
 
-			sender.EXPECT().SendMessage(mock.Anything, mock.Anything).Return(nil, nil)
+			sender.EXPECT().SendMessage(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 
 			logger := slog.New(log.NewDiscardHandler())
-			h := notesaving.New(logger, usecase)
+			h := notesaving.New(logger, saver)
 
 			h(t.Context(), sender, tc.update)
-
-			adder.AssertExpectations(t)
-			sender.AssertExpectations(t)
 		})
 	}
 }

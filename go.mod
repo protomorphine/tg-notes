@@ -3,6 +3,9 @@ module protomorphine/tg-notes
 go 1.25.5
 
 require (
+	github.com/aaaton/golem/v4 v4.0.2
+	github.com/aaaton/golem/v4/dicts/en v1.0.1
+	github.com/aaaton/golem/v4/dicts/ru v0.0.0-20250408131944-3488790fc110
 	github.com/go-git/go-git/v6 v6.0.0-20260210102253-e4d10f0e569a
 	github.com/go-telegram/bot v1.18.0
 	github.com/google/uuid v1.6.0

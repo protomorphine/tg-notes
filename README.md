@@ -20,39 +20,47 @@ A background process then handles the synchronization with the remote Git reposi
 The following diagram illustrates the complete workflow, including the names of the internal components and functions involved.
 
 ```
-+------+   +----------+   +--------------------+   +--------------+           +-------------------+
-| User |   | Telegram |   | NoteSaving Handler |   |  GitStorage  |           |  Remote Git Repo  |
-+------+   +----------+   +--------------------+   +--------------+           +-------------------+
-   |           |                  |                      |                             |
-   |---Note--->|                  |                      |                             |
-   |           |---Webhook------->|                      |                             |
-   |           |                  |                      |                             |
-   |           |                  |----[ Add() ]-------->|                             |
-   |           |                  |                      |--[ createFile() ]           |
-   |           |                  |                      |                             |
-   |           |                  |<---[ Success ]-------|                             |
-   |           |                  |                      |                             |
-   |           |<--Send "Saved!"--|                      |                             |
-   |           |                  |                      |                             |
-   |<--Confirm-|                  |                      |                             |
-   |           |                  |                      |                             |
-...|...........|..................|....................................................|...
-   .           .                  .                      .                             .
-   .           .                  .  BACKGROUND `Processor` JOB                        .
-   .           .                  .                      .                             .
-   |           |                  |                      |   [ 1. Wait for Trigger ]   |
-   |           |                  |                      |    - Timer (Ticker) fires   |
-   |           |                  |                      |    - Note Buffer is full    |
-   |           |                  |                      |                             |
-   |           |                  |                      |---[ 2. prepareStorage() ]-->|
-   |           |                  |                      |      (git pull)             |
-   |           |                  |                      |<----------------------------|
-   |           |                  |                      |                             |
-   |           |                  |                      |-------[ 3. save() ]-------->|
-   |           |                  |                      |        (git commit)         |
-   |           |                  |                      |         (git push)          |
-   |           |                  |                      |---------------------------->|
-   |           |                  |                      |                             |
++------+   +----------+   +--------------------+   +--------------------+   +--------------------+   +--------------+           +-------------------+
+| User |   | Telegram |   | NoteSaving Handler |   | NoteSaving Usecase |   |  Note  Classifier  |   |  GitStorage  |           |  Remote Git Repo  |
++------+   +----------+   +--------------------+   +--------------------+   +--------------------+   +--------------+           +-------------------+
+   |           |                  |                        |                          |                     |                             |
+   |---Note--->|                  |                        |                          |                     |                             |
+   |           |---Webhook------->|                        |                          |                     |                             |
+   |           |                  |                        |                          |                     |                             |
+   |           |                  |---[ Save() ]---------->|                          |                     |                             |
+   |           |                  |                        |                          |                     |                             |
+   |           |                  |                        |---[ Predict() ]--------->|                     |                             |
+   |           |                  |                        |                          |                     |                             |
+   |           |                  |                        |<-------------[ Probs ]---|                     |                             |
+   |           |                  |                        |                          |                     |                             |
+   |           |                  |                        |                          |                     |                             |
+   |           |                  |                        |---[ Add() ]----------------------------------->|                             |
+   |           |                  |                        |                          |                     |--[ createFile() ]           |
+   |           |                  |                        |<---------------------------------[ Success ]---|                             |
+   |           |                  |                        |                          |                     |                             |
+   |           |                  |<---[ Success ]---------|                          |                     |                             |
+   |           |                  |                        |                          |                     |                             |
+   |           |<--Send "Saved!"--|                        |                          |                     |                             |
+   |           |                  |                        |                          |                     |                             |
+   |<--Confirm-|                  |                        |                          |                     |                             |
+   |           |                  |                        |                          |                     |                             |
+...|...........|..................|........................|..........................|...................................................|...
+   .           .                  .                                                                         .                             .
+   .           .                  .                  BACKGROUND `Processor` JOB                             .                             .
+   .           .                  .                                                                         .                             .
+   |           |                  |                                                                         |   [ 1. Wait for Trigger ]   |
+   |           |                  |                                                                         |    - Timer (Ticker) fires   |
+   |           |                  |                                                                         |    - Note Buffer is full    |
+   |           |                  |                                                                         |                             |
+   |           |                  |                                                                         |---[ 2. prepareStorage() ]-->|
+   |           |                  |                                                                         |      (git pull)             |
+   |           |                  |                                                                         |<----------------------------|
+   |           |                  |                                                                         |                             |
+   |           |                  |                                                                         |-------[ 3. save() ]-------->|
+   |           |                  |                                                                         |        (git commit)         |
+   |           |                  |                                                                         |         (git push)          |
+   |           |                  |                                                                         |---------------------------->|
+   |           |                  |                                                                         |                             |
 ```
 
 ## Configuration
@@ -74,13 +82,16 @@ bot:
 httpServer:
   addr: ":8080"
 
+noteSave:
+  defaultCategory: "bot-notes"
+  categoryThreshold: .7
+
 gitRepository:
   url: "git@github.com:user/repo.git" # Should be redefined
   path: "/app/notes"
   auth:
     key: "" # Should be redefined via environment variable
     keyPassword: "" # Should be redefined via environment variable
-  saveTo: "notes"
   branch: "main"
   remoteName: "origin"
   committer:

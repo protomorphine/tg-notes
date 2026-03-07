@@ -10,8 +10,9 @@ import (
 	"os"
 	"os/signal"
 
-	notesavingUC "protomorphine/tg-notes/internal/app/usecase/notesaving"
-	"protomorphine/tg-notes/internal/bot/handlers/notesaving"
+	"protomorphine/tg-notes/internal/app/nlp"
+	usecase "protomorphine/tg-notes/internal/app/usecases/notesaving"
+	handler "protomorphine/tg-notes/internal/bot/handlers/notesaving"
 	"protomorphine/tg-notes/internal/config"
 	"protomorphine/tg-notes/internal/log"
 	"protomorphine/tg-notes/internal/storage/git"
@@ -48,13 +49,25 @@ func main() {
 		os.Exit(1)
 	}
 
+	go storage.Processor(ctx, logger)
 	logger.Info("successfully initialized git storage")
 
-	go storage.Processor(ctx, logger)
+	nlpProcessor, err := nlp.NewProcessor()
+	if err != nil {
+		logger.Error("error while creating NLP processor", log.Err(err))
+		os.Exit(1)
+	}
 
-	noteSavingUsecase := notesavingUC.New(storage)
+	notes, err := storage.Notes(ctx)
+	if err != nil {
+		logger.Error("error while getting notes for training", log.Err(err))
+		os.Exit(1)
+	}
 
-	b, err := newBot(logger, &cfg.Bot, notesaving.New(logger, noteSavingUsecase))
+	classifier := nlp.NewClassifier(nlpProcessor, notes)
+	usecase := usecase.New(storage, classifier, &cfg.NoteSave)
+
+	b, err := newBot(logger, &cfg.Bot, handler.New(logger, usecase))
 	if err != nil {
 		logger.Error("error while Telegram bot initialization", log.Err(err))
 		os.Exit(1)
@@ -65,6 +78,7 @@ func main() {
 	removeWebhook, err := setWebhook(ctx, logger, b, cfg.Bot.WebHookURL)
 	if err != nil {
 		logger.Error("error while setting up webhook", log.Err(err))
+		os.Exit(1)
 	}
 	defer removeWebhook()
 

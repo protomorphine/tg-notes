@@ -6,10 +6,12 @@ bot:
   allowedUserID: 140302304
 httpServer:
   addr: ":2000"
+noteSave:
+  defaultCategory: "bot-notes"
+  categoryThreshold: .7
 gitRepository:
   url: "git@github.com:protomorphine/notes.git"
   path: "/home/drzaytsev/notes/"
-  saveTo: "bot-notes"
   branch: "tg-notes"
   remoteName: "origin"
   bufSize: 5

@@ -7,13 +7,16 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"path"
+	"strings"
 	"sync"
 	"text/template"
 	"time"
 
 	"protomorphine/tg-notes/internal/config"
+	"protomorphine/tg-notes/internal/domain"
 	"protomorphine/tg-notes/internal/log"
 
 	"github.com/go-git/go-git/v6"
@@ -113,13 +116,13 @@ func New(cfg *config.GitRepository) (*GitStorage, error) {
 
 // Add adds a new note to the storage. The note is buffered and saved
 // to the Git repository by the Processor.
-func (g *GitStorage) Add(ctx context.Context, title, text string) error {
+func (g *GitStorage) Add(ctx context.Context, note domain.Note) error {
 	const op = "storage.git.Add"
 
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	path, err := g.createFile(title+".md", text)
+	path, err := g.createFile(string(note.Category), note.Title+".md", note.Content)
 	if err != nil {
 		return fmt.Errorf("%s: file save error: %w", op, err)
 	}
@@ -131,6 +134,74 @@ func (g *GitStorage) Add(ctx context.Context, title, text string) error {
 		case g.bufFullCh <- struct{}{}:
 		default:
 		}
+	}
+
+	return nil
+}
+
+func (g *GitStorage) Notes(ctx context.Context) ([]domain.Note, error) {
+	const op = "storage.git.Notes"
+
+	var notes []domain.Note
+
+	rootEntries, err := g.worktree.Filesystem.ReadDir("/")
+	if err != nil {
+		return nil, fmt.Errorf("%s: failed to read root directory: %w", op, err)
+	}
+
+	for _, entry := range rootEntries {
+		if !entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
+			continue
+		}
+
+		category := domain.Category(entry.Name())
+		if err := g.readNotesRecursive(entry.Name(), category, &notes); err != nil {
+			return nil, fmt.Errorf("%s: failed to read notes for category %s: %w", op, category, err)
+		}
+	}
+
+	return notes, nil
+}
+
+func (g *GitStorage) readNotesRecursive(currentPath string, category domain.Category, notes *[]domain.Note) error {
+	const op = "storage.git.readNotesRecursive"
+
+	entries, err := g.worktree.Filesystem.ReadDir(currentPath)
+	if err != nil {
+		return fmt.Errorf("%s: failed to read directory %s: %w", op, currentPath, err)
+	}
+
+	for _, entry := range entries {
+		newPath := path.Join(currentPath, entry.Name())
+
+		if entry.IsDir() {
+			if err := g.readNotesRecursive(newPath, category, notes); err != nil {
+				return err
+			}
+			continue
+		}
+
+		if !strings.HasSuffix(entry.Name(), ".md") {
+			continue
+		}
+
+		file, err := g.worktree.Filesystem.Open(newPath)
+		if err != nil {
+			return fmt.Errorf("%s: failed to open note file %s: %w", op, newPath, err)
+		}
+
+		content, err := io.ReadAll(file)
+		if err != nil {
+			_ = file.Close()
+			return fmt.Errorf("%s: failed to read note content from %s: %w", op, newPath, err)
+		}
+		_ = file.Close()
+
+		*notes = append(*notes, domain.Note{
+			Category: category,
+			Title:    strings.TrimSuffix(entry.Name(), ".md"),
+			Content:  string(content),
+		})
 	}
 
 	return nil
@@ -226,8 +297,8 @@ func (g *GitStorage) handlePendingNotes(ctx context.Context) (int, error) {
 	return notesCount, nil
 }
 
-func (g *GitStorage) createFile(filename, content string) (string, error) {
-	path := path.Join(g.config.PathToSave, filename)
+func (g *GitStorage) createFile(dir, filename, content string) (string, error) {
+	path := path.Join(dir, filename)
 
 	file, err := g.worktree.Filesystem.Create(path)
 	if err != nil {

@@ -2,11 +2,14 @@
 package notesaving
 
 import (
+	"bytes"
 	"context"
-	_ "embed"
+	"embed"
+	"fmt"
+	"html/template"
 	"log/slog"
 
-	"protomorphine/tg-notes/internal/app/usecase/notesaving"
+	appmodels "protomorphine/tg-notes/internal/app/models"
 	"protomorphine/tg-notes/internal/bot/middleware"
 	"protomorphine/tg-notes/internal/log"
 
@@ -14,16 +17,34 @@ import (
 	"github.com/go-telegram/bot/models"
 )
 
-var (
-	//go:embed resources/save_err.tmpl
-	saveErrMsg string
-
-	//go:embed resources/save_success.tmpl
-	saveSuccessMsg string
-
-	//go:embed resources/empty_message.tmpl
-	emptyMessageMsg string
+const (
+	successTemplate  = "resources/save_success.tmpl"
+	errorTemplate    = "resources/save_err.tmpl"
+	emptyMsgTemplate = "resources/empty_message.tmpl"
 )
+
+var (
+	//go:embed resources
+	templatesFS embed.FS
+
+	templates map[string]*template.Template
+)
+
+func init() {
+	templates = make(map[string]*template.Template)
+
+	if tmpl, err := template.ParseFS(templatesFS, successTemplate); err == nil {
+		templates[successTemplate] = tmpl
+	}
+
+	if tmpl, err := template.ParseFS(templatesFS, errorTemplate); err == nil {
+		templates[errorTemplate] = tmpl
+	}
+
+	if tmpl, err := template.ParseFS(templatesFS, emptyMsgTemplate); err == nil {
+		templates[emptyMsgTemplate] = tmpl
+	}
+}
 
 // MessageSender is an interface for sending messages.
 //
@@ -32,11 +53,18 @@ type MessageSender interface {
 	SendMessage(ctx context.Context, params *bot.SendMessageParams) (*models.Message, error)
 }
 
+// NoteSaver is an interface for saving new notes.
+//
+//mockery:generate: true
+type NoteSaver interface {
+	Save(ctx context.Context, text string) (appmodels.SaveResult, error)
+}
+
 // Handler represents the notesaving handler for the bot.
 type Handler func(ctx context.Context, sender MessageSender, update *models.Update)
 
 // New creates a new notesaving Handler.
-func New(logger *slog.Logger, saver *notesaving.Usecase) Handler {
+func New(logger *slog.Logger, saver NoteSaver) Handler {
 	return func(ctx context.Context, sender MessageSender, update *models.Update) {
 		const op = "bot.handlers.add"
 		logger := logger.With(log.Op(op), log.ReqID(middleware.GetReqID(ctx)))
@@ -47,30 +75,42 @@ func New(logger *slog.Logger, saver *notesaving.Usecase) Handler {
 		}
 
 		messageID := update.Message.ID
-
 		chatID := update.Message.Chat.ID
-		text := update.Message.Text
+
+		text := extractNoteText(update.Message)
 
 		if text == "" {
-			text = update.Message.Caption
+			logger.Warn("received message with empty text and caption")
 
-			if text == "" {
-				logger.Warn("received message with empty text and caption")
-				sendMessage(ctx, logger, sender, chatID, messageID, emptyMessageMsg)
-
-				return
+			if message, err := render(emptyMsgTemplate, struct{}{}); err == nil {
+				sendMessage(ctx, logger, sender, chatID, messageID, message)
+			} else {
+				logger.Error("error while rendering template", log.Err(err))
 			}
+
+			return
 		}
 
-		if err := saver.Save(ctx, text); err != nil {
+		res, err := saver.Save(ctx, text)
+		if err != nil {
 			logger.Error("error occured while saving new note", log.Err(err))
-			sendMessage(ctx, logger, sender, chatID, messageID, saveErrMsg)
+
+			if message, err := render(errorTemplate, struct{}{}); err == nil {
+				sendMessage(ctx, logger, sender, chatID, messageID, message)
+			} else {
+				logger.Error("error while rendering template", log.Err(err))
+			}
 
 			return
 		}
 
 		logger.Info("new note saved")
-		sendMessage(ctx, logger, sender, chatID, messageID, saveSuccessMsg)
+
+		if message, err := render(successTemplate, res); err == nil {
+			sendMessage(ctx, logger, sender, chatID, messageID, message)
+		} else {
+			logger.Error("error while rendering template", log.Err(err))
+		}
 	}
 }
 
@@ -93,4 +133,28 @@ func sendMessage(
 	if err != nil {
 		logger.Error("error occured while sending message", log.Err(err))
 	}
+}
+
+func extractNoteText(message *models.Message) string {
+	text := message.Text
+
+	if text == "" {
+		text = message.Caption
+	}
+
+	return text
+}
+
+func render(templatePath string, args any) (string, error) {
+	tmpl, ok := templates[templatePath]
+	if !ok {
+		return "", fmt.Errorf("unknown template: %s", templatePath)
+	}
+
+	buf := &bytes.Buffer{}
+	if err := tmpl.Execute(buf, args); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
