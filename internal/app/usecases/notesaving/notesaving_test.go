@@ -14,9 +14,9 @@ import (
 )
 
 var (
-	category    domain.Category             = "300 unknown"
-	adderErr    error                       = errors.New("failed to add")
-	predictions map[domain.Category]float64 = make(map[domain.Category]float64)
+	category     domain.Category             = "300 unknown"
+	errAdderMock error                       = errors.New("failed to add")
+	predictions  map[domain.Category]float64 = make(map[domain.Category]float64)
 )
 
 func TestSave(t *testing.T) {
@@ -42,12 +42,12 @@ func TestSave(t *testing.T) {
 			name: "adder returns error",
 			text: "test note content",
 			setupAdder: func(m *mocks.NoteAdder) {
-				m.EXPECT().Add(mock.Anything, mock.AnythingOfType("domain.Note")).Return(adderErr).Once()
+				m.EXPECT().Add(mock.Anything, mock.AnythingOfType("domain.Note")).Return(errAdderMock).Once()
 			},
 			setupClassifier: func(m *mocks.Classifier) {
 				m.EXPECT().Predict(mock.AnythingOfType("string")).Return(predictions, category)
 			},
-			expectedErr: adderErr,
+			expectedErr: errAdderMock,
 		},
 	}
 

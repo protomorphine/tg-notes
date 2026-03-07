@@ -13,11 +13,13 @@ import (
 	"github.com/aaaton/golem/v4/dicts/ru"
 )
 
-//go:embed resources/stopwords_en.txt
-var enStopwordsData []byte
+var (
+	//go:embed resources/stopwords_en.txt
+	enStopwordsData []byte
 
-//go:embed resources/stopwords_ru.txt
-var ruStopwordsData []byte
+	//go:embed resources/stopwords_ru.txt
+	ruStopwordsData []byte
+)
 
 // Processor handles tokenization and lemmatization of text.
 type Processor struct {

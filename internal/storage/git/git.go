@@ -26,12 +26,8 @@ import (
 	"github.com/go-git/go-git/v6/plumbing/transport/ssh"
 )
 
-var (
-	//go:embed resources
-	templates embed.FS
-
-	noErrNothingToDo error = errors.New("nothing to do")
-)
+//go:embed resources
+var templates embed.FS
 
 // GitStorage represents a Git-backed storage for notes.
 type GitStorage struct {
@@ -246,12 +242,12 @@ func (g *GitStorage) triggerUpdate(ctx context.Context, logger *slog.Logger) {
 	saved, err := g.handlePendingNotes(ctx)
 	if err != nil {
 
-		if errors.Is(err, noErrNothingToDo) {
-			logger.Debug("no new notes to save")
-			return
-		}
-
 		logger.Error("error while handling pending notes", log.Err(err))
+		return
+	}
+
+	if saved == 0 {
+		logger.Debug("no new notes to save")
 		return
 	}
 
@@ -269,7 +265,7 @@ func (g *GitStorage) handlePendingNotes(ctx context.Context) (int, error) {
 
 	if len(g.buf) == 0 {
 		g.mu.Unlock()
-		return 0, noErrNothingToDo
+		return 0, nil
 	}
 
 	buf := make([]string, len(g.buf))

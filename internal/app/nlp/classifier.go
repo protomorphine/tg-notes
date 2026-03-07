@@ -28,6 +28,7 @@ func NewClassifier(processor *Processor, dataset []domain.Note) *Classifier {
 	return c
 }
 
+// train fits internal values with given dataset.
 func (c *Classifier) train(dataset []domain.Note) {
 	vocab := make(map[string]struct{})
 	docsInCat := make(map[domain.Category]int)
@@ -56,6 +57,7 @@ func (c *Classifier) train(dataset []domain.Note) {
 	c.vocabSize = len(vocab)
 }
 
+// Predict returns map with category probabilities for given text.
 func (c *Classifier) Predict(text string) (map[domain.Category]float64, domain.Category) {
 	logPredictions := make(map[domain.Category]float64)
 	tokens := c.nlpProcessor.Process(text)
