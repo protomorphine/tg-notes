@@ -6,10 +6,10 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"html/template"
 	"log/slog"
+	"text/template"
 
-	appmodels "protomorphine/tg-notes/internal/app/models"
+	"protomorphine/tg-notes/internal/app/usecases/notesaving"
 	"protomorphine/tg-notes/internal/bot/middleware"
 	"protomorphine/tg-notes/internal/log"
 
@@ -33,15 +33,15 @@ var (
 func init() {
 	templates = make(map[string]*template.Template)
 
-	if tmpl, err := template.ParseFS(templatesFS, successTemplate); err == nil {
+	if tmpl, err := template.ParseFS(templatesFS, successTemplate); err != nil {
 		templates[successTemplate] = tmpl
 	}
 
-	if tmpl, err := template.ParseFS(templatesFS, errorTemplate); err == nil {
+	if tmpl, err := template.ParseFS(templatesFS, errorTemplate); err != nil {
 		templates[errorTemplate] = tmpl
 	}
 
-	if tmpl, err := template.ParseFS(templatesFS, emptyMsgTemplate); err == nil {
+	if tmpl, err := template.ParseFS(templatesFS, emptyMsgTemplate); err != nil {
 		templates[emptyMsgTemplate] = tmpl
 	}
 }
@@ -53,18 +53,11 @@ type MessageSender interface {
 	SendMessage(ctx context.Context, params *bot.SendMessageParams) (*models.Message, error)
 }
 
-// NoteSaver is an interface for saving new notes.
-//
-//mockery:generate: true
-type NoteSaver interface {
-	Save(ctx context.Context, text string) (appmodels.SaveResult, error)
-}
-
 // Handler represents the notesaving handler for the bot.
 type Handler func(ctx context.Context, sender MessageSender, update *models.Update)
 
 // New creates a new notesaving Handler.
-func New(logger *slog.Logger, saver NoteSaver) Handler {
+func New(logger *slog.Logger, saver notesaving.NoteSaver) Handler {
 	return func(ctx context.Context, sender MessageSender, update *models.Update) {
 		const op = "bot.handlers.add"
 		logger := logger.With(log.Op(op), log.ReqID(middleware.GetReqID(ctx)))

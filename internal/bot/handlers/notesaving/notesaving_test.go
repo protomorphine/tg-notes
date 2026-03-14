@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	appmodels "protomorphine/tg-notes/internal/app/models"
+	ucmocks "protomorphine/tg-notes/internal/app/usecases/notesaving/mocks"
 	"protomorphine/tg-notes/internal/bot/handlers/notesaving"
 	"protomorphine/tg-notes/internal/bot/handlers/notesaving/mocks"
 	"protomorphine/tg-notes/internal/log"
@@ -17,7 +18,7 @@ import (
 func TestNilMessage(t *testing.T) {
 	update := &models.Update{Message: nil}
 
-	saver := mocks.NewNoteSaver(t)
+	saver := ucmocks.NewNoteSaver(t)
 	sender := mocks.NewMessageSender(t)
 
 	logger := slog.New(log.NewDiscardHandler())
@@ -37,7 +38,7 @@ func TestEmptyMessageText(t *testing.T) {
 		},
 	}
 
-	saver := mocks.NewNoteSaver(t)
+	saver := ucmocks.NewNoteSaver(t)
 	sender := mocks.NewMessageSender(t)
 
 	saver.EXPECT().Save(mock.Anything, mock.AnythingOfType("string")).Return(appmodels.SaveResult{}, nil)
@@ -57,7 +58,7 @@ func TestTextAndCaptionEmpty(t *testing.T) {
 		},
 	}
 
-	saver := mocks.NewNoteSaver(t)
+	saver := ucmocks.NewNoteSaver(t)
 	sender := mocks.NewMessageSender(t)
 
 	sender.EXPECT().SendMessage(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
@@ -75,7 +76,7 @@ func TestAddNote(t *testing.T) {
 	tests := []struct {
 		name       string
 		update     *models.Update
-		setupSaver func(*mocks.NoteSaver)
+		setupSaver func(*ucmocks.NoteSaver)
 	}{
 		{
 			name: "message text is not empty",
@@ -84,7 +85,7 @@ func TestAddNote(t *testing.T) {
 					Text: "some text",
 				},
 			},
-			setupSaver: func(adder *mocks.NoteSaver) {
+			setupSaver: func(adder *ucmocks.NoteSaver) {
 				adder.EXPECT().Save(mock.Anything, mock.AnythingOfType("string")).Return(appmodels.SaveResult{}, nil)
 			},
 		},
@@ -96,7 +97,7 @@ func TestAddNote(t *testing.T) {
 					Caption: "some caption",
 				},
 			},
-			setupSaver: func(adder *mocks.NoteSaver) {
+			setupSaver: func(adder *ucmocks.NoteSaver) {
 				adder.EXPECT().Save(mock.Anything, mock.AnythingOfType("string")).Return(appmodels.SaveResult{}, nil)
 			},
 		},
@@ -107,7 +108,7 @@ func TestAddNote(t *testing.T) {
 					Text: "some text",
 				},
 			},
-			setupSaver: func(adder *mocks.NoteSaver) {
+			setupSaver: func(adder *ucmocks.NoteSaver) {
 				adder.EXPECT().Save(mock.Anything, mock.AnythingOfType("string")).Return(appmodels.SaveResult{}, errors.New("internal adder error"))
 			},
 		},
@@ -117,7 +118,7 @@ func TestAddNote(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			saver := mocks.NewNoteSaver(t)
+			saver := ucmocks.NewNoteSaver(t)
 			tc.setupSaver(saver)
 
 			sender := mocks.NewMessageSender(t)

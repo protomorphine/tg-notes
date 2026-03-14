@@ -11,6 +11,13 @@ import (
 	"protomorphine/tg-notes/internal/domain"
 )
 
+// NoteSaver is an interface for saving new notes.
+//
+//mockery:generate: true
+type NoteSaver interface {
+	Save(ctx context.Context, text string) (models.SaveResult, error)
+}
+
 // NoteAdder is an interface for adding a note.
 //
 //mockery:generate: true
@@ -22,7 +29,7 @@ type NoteAdder interface {
 //
 //mockery:generate: true
 type Classifier interface {
-	Predict(content string) (map[domain.Category]float64, domain.Category)
+	Classify(content string) (map[domain.Category]float64, domain.Category)
 }
 
 // Usecase represents the usecase for saving notes.
@@ -45,7 +52,7 @@ func New(adder NoteAdder, classifier Classifier, cfg *config.NoteSaveConfig) *Us
 func (u *Usecase) Save(ctx context.Context, text string) (models.SaveResult, error) {
 	const op = "app.usecase.notesaving.Save"
 
-	probs, category := u.classifier.Predict(text)
+	probs, category := u.classifier.Classify(text)
 
 	if probs[category] < u.cfg.CategoryThreshold {
 		category = domain.Category(u.cfg.DefaultCategory)

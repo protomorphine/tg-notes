@@ -57,8 +57,8 @@ func (c *Classifier) train(dataset []domain.Note) {
 	c.vocabSize = len(vocab)
 }
 
-// Predict returns map with category probabilities for given text.
-func (c *Classifier) Predict(text string) (map[domain.Category]float64, domain.Category) {
+// Classify returns map with category probabilities for given text.
+func (c *Classifier) Classify(text string) (map[domain.Category]float64, domain.Category) {
 	logPredictions := make(map[domain.Category]float64)
 	tokens := c.nlpProcessor.Process(text)
 

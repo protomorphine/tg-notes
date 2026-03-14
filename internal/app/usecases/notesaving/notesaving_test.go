@@ -34,7 +34,7 @@ func TestSave(t *testing.T) {
 				m.EXPECT().Add(mock.Anything, mock.AnythingOfType("domain.Note")).Return(nil).Once()
 			},
 			setupClassifier: func(m *mocks.Classifier) {
-				m.EXPECT().Predict(mock.AnythingOfType("string")).Return(predictions, category)
+				m.EXPECT().Classify(mock.AnythingOfType("string")).Return(predictions, category)
 			},
 			expectedErr: nil,
 		},
@@ -45,7 +45,7 @@ func TestSave(t *testing.T) {
 				m.EXPECT().Add(mock.Anything, mock.AnythingOfType("domain.Note")).Return(errAdderMock).Once()
 			},
 			setupClassifier: func(m *mocks.Classifier) {
-				m.EXPECT().Predict(mock.AnythingOfType("string")).Return(predictions, category)
+				m.EXPECT().Classify(mock.AnythingOfType("string")).Return(predictions, category)
 			},
 			expectedErr: errAdderMock,
 		},

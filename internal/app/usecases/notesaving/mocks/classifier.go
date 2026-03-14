@@ -36,12 +36,12 @@ func (_m *Classifier) EXPECT() *Classifier_Expecter {
 	return &Classifier_Expecter{mock: &_m.Mock}
 }
 
-// Predict provides a mock function for the type Classifier
-func (_mock *Classifier) Predict(content string) (map[domain.Category]float64, domain.Category) {
+// Classify provides a mock function for the type Classifier
+func (_mock *Classifier) Classify(content string) (map[domain.Category]float64, domain.Category) {
 	ret := _mock.Called(content)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Predict")
+		panic("no return value specified for Classify")
 	}
 
 	var r0 map[domain.Category]float64
@@ -64,18 +64,18 @@ func (_mock *Classifier) Predict(content string) (map[domain.Category]float64, d
 	return r0, r1
 }
 
-// Classifier_Predict_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Predict'
-type Classifier_Predict_Call struct {
+// Classifier_Classify_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Classify'
+type Classifier_Classify_Call struct {
 	*mock.Call
 }
 
-// Predict is a helper method to define mock.On call
+// Classify is a helper method to define mock.On call
 //   - content string
-func (_e *Classifier_Expecter) Predict(content interface{}) *Classifier_Predict_Call {
-	return &Classifier_Predict_Call{Call: _e.mock.On("Predict", content)}
+func (_e *Classifier_Expecter) Classify(content interface{}) *Classifier_Classify_Call {
+	return &Classifier_Classify_Call{Call: _e.mock.On("Classify", content)}
 }
 
-func (_c *Classifier_Predict_Call) Run(run func(content string)) *Classifier_Predict_Call {
+func (_c *Classifier_Classify_Call) Run(run func(content string)) *Classifier_Classify_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -88,12 +88,12 @@ func (_c *Classifier_Predict_Call) Run(run func(content string)) *Classifier_Pre
 	return _c
 }
 
-func (_c *Classifier_Predict_Call) Return(categoryToFloat64 map[domain.Category]float64, category domain.Category) *Classifier_Predict_Call {
+func (_c *Classifier_Classify_Call) Return(categoryToFloat64 map[domain.Category]float64, category domain.Category) *Classifier_Classify_Call {
 	_c.Call.Return(categoryToFloat64, category)
 	return _c
 }
 
-func (_c *Classifier_Predict_Call) RunAndReturn(run func(content string) (map[domain.Category]float64, domain.Category)) *Classifier_Predict_Call {
+func (_c *Classifier_Classify_Call) RunAndReturn(run func(content string) (map[domain.Category]float64, domain.Category)) *Classifier_Classify_Call {
 	_c.Call.Return(run)
 	return _c
 }
