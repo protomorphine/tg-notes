@@ -13,13 +13,8 @@ import (
 	"github.com/aaaton/golem/v4/dicts/ru"
 )
 
-var (
-	//go:embed resources/stopwords_en.txt
-	enStopwordsData []byte
-
-	//go:embed resources/stopwords_ru.txt
-	ruStopwordsData []byte
-)
+//go:embed resources/stopwords.txt
+var stopwordsData []byte
 
 // Processor handles tokenization and lemmatization of text.
 type Processor struct {
@@ -40,7 +35,7 @@ func NewProcessor() (*Processor, error) {
 		return nil, fmt.Errorf("failed to create en lemmatizer: %w", err)
 	}
 
-	stopwords, err := loadStopwords(enStopwordsData, ruStopwordsData)
+	stopwords, err := loadStopwords(stopwordsData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load stopwords: %w", err)
 	}
@@ -52,19 +47,20 @@ func NewProcessor() (*Processor, error) {
 	}, nil
 }
 
-func loadStopwords(datas ...[]byte) (map[string]struct{}, error) {
+func loadStopwords(data []byte) (map[string]struct{}, error) {
 	stopwords := make(map[string]struct{})
-	for _, data := range datas {
-		scanner := bufio.NewScanner(bytes.NewReader(data))
-		for scanner.Scan() {
-			word := strings.TrimSpace(scanner.Text())
-			if word != "" {
-				stopwords[word] = struct{}{}
-			}
+	scanner := bufio.NewScanner(bytes.NewReader(data))
+
+	for scanner.Scan() {
+		word := strings.TrimSpace(scanner.Text())
+
+		if word != "" {
+			stopwords[word] = struct{}{}
 		}
-		if err := scanner.Err(); err != nil {
-			return nil, fmt.Errorf("failed to scan stopwords: %w", err)
-		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("failed to scan stopwords: %w", err)
 	}
 
 	return stopwords, nil
@@ -72,44 +68,29 @@ func loadStopwords(datas ...[]byte) (map[string]struct{}, error) {
 
 // Process tokenizes and lemmatizes a document.
 func (p *Processor) Process(doc string) []string {
-	tokens := p.tokenize(doc)
-	return p.lemmatize(tokens)
-}
-
-// tokenize tokenizes a document and removes stopwords.
-func (p *Processor) tokenize(doc string) []string {
-	text := strings.Map(func(r rune) rune {
-		if unicode.IsSymbol(r) || unicode.IsDigit(r) {
+	clearText := strings.Map(func(r rune) rune {
+		if unicode.IsSymbol(r) || unicode.IsDigit(r) || unicode.IsPunct(r) {
 			return -1
 		}
 		return r
-	}, string(doc))
+	}, doc)
 
-	fields := strings.Fields(strings.ToLower(text))
-
+	fields := strings.Fields(strings.ToLower(clearText))
 	tokens := make([]string, 0, len(fields))
-	for _, field := range fields {
-		if _, ok := p.stopwords[field]; ok {
+
+	for _, token := range fields {
+		if _, ok := p.stopwords[token]; ok {
 			continue
 		}
-		tokens = append(tokens, field)
+
+		if p.ruLemmatizer.InDict(token) {
+			tokens = append(tokens, p.ruLemmatizer.Lemma(token))
+		} else if p.enLemmatizer.InDict(token) {
+			tokens = append(tokens, p.enLemmatizer.Lemma(token))
+		} else {
+			tokens = append(tokens, token)
+		}
 	}
 
 	return tokens
-}
-
-// lemmatize lemmatizes a list of tokens.
-func (p *Processor) lemmatize(tokens []string) []string {
-	lemmas := make([]string, 0, len(tokens))
-
-	for _, token := range tokens {
-		if p.ruLemmatizer.InDict(token) {
-			lemmas = append(lemmas, p.ruLemmatizer.Lemma(token))
-		} else if p.enLemmatizer.InDict(token) {
-			lemmas = append(lemmas, p.enLemmatizer.Lemma(token))
-		} else {
-			lemmas = append(lemmas, token)
-		}
-	}
-	return lemmas
 }
