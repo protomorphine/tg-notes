@@ -33,15 +33,15 @@ var (
 func init() {
 	templates = make(map[string]*template.Template)
 
-	if tmpl, err := template.ParseFS(templatesFS, successTemplate); err != nil {
+	if tmpl, err := template.ParseFS(templatesFS, successTemplate); err == nil {
 		templates[successTemplate] = tmpl
 	}
 
-	if tmpl, err := template.ParseFS(templatesFS, errorTemplate); err != nil {
+	if tmpl, err := template.ParseFS(templatesFS, errorTemplate); err == nil {
 		templates[errorTemplate] = tmpl
 	}
 
-	if tmpl, err := template.ParseFS(templatesFS, emptyMsgTemplate); err != nil {
+	if tmpl, err := template.ParseFS(templatesFS, emptyMsgTemplate); err == nil {
 		templates[emptyMsgTemplate] = tmpl
 	}
 }
