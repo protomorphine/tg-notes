@@ -110,9 +110,9 @@ func New(cfg *config.GitRepository) (*GitStorage, error) {
 	}, nil
 }
 
-// Add adds a new note to the storage. The note is buffered and saved
+// Save save the note to git repo. The note is buffered and saved
 // to the Git repository by the Processor.
-func (g *GitStorage) Add(ctx context.Context, note domain.Note) error {
+func (g *GitStorage) Save(ctx context.Context, note domain.Note) error {
 	const op = "storage.git.Add"
 
 	g.mu.Lock()

@@ -18,15 +18,15 @@ import (
 func TestNilMessage(t *testing.T) {
 	update := &models.Update{Message: nil}
 
-	saver := ucmocks.NewNoteSaver(t)
+	creator := ucmocks.NewNoteCreator(t)
 	sender := mocks.NewMessageSender(t)
 
 	logger := slog.New(log.NewDiscardHandler())
-	h := notesaving.New(logger, saver)
+	h := notesaving.New(logger, creator)
 
 	h(t.Context(), sender, update)
 
-	saver.AssertNotCalled(t, "Save")
+	creator.AssertNotCalled(t, "Save")
 	sender.AssertNotCalled(t, "SendMessage")
 }
 
@@ -38,14 +38,14 @@ func TestEmptyMessageText(t *testing.T) {
 		},
 	}
 
-	saver := ucmocks.NewNoteSaver(t)
+	creator := ucmocks.NewNoteCreator(t)
 	sender := mocks.NewMessageSender(t)
 
-	saver.EXPECT().Save(mock.Anything, mock.AnythingOfType("string")).Return(appmodels.SaveResult{}, nil)
+	creator.EXPECT().Create(mock.Anything, mock.AnythingOfType("string")).Return(appmodels.SaveResult{}, nil)
 	sender.EXPECT().SendMessage(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 
 	logger := slog.New(log.NewDiscardHandler())
-	h := notesaving.New(logger, saver)
+	h := notesaving.New(logger, creator)
 
 	h(t.Context(), sender, update)
 }
@@ -58,25 +58,25 @@ func TestTextAndCaptionEmpty(t *testing.T) {
 		},
 	}
 
-	saver := ucmocks.NewNoteSaver(t)
+	creator := ucmocks.NewNoteCreator(t)
 	sender := mocks.NewMessageSender(t)
 
 	sender.EXPECT().SendMessage(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 
 	logger := slog.New(log.NewDiscardHandler())
-	h := notesaving.New(logger, saver)
+	h := notesaving.New(logger, creator)
 
 	h(t.Context(), sender, update)
 
 	sender.AssertExpectations(t)
-	saver.AssertNotCalled(t, "Save")
+	creator.AssertNotCalled(t, "Save")
 }
 
 func TestAddNote(t *testing.T) {
 	tests := []struct {
-		name       string
-		update     *models.Update
-		setupSaver func(*ucmocks.NoteSaver)
+		name         string
+		update       *models.Update
+		setupCreator func(*ucmocks.NoteCreator)
 	}{
 		{
 			name: "message text is not empty",
@@ -85,8 +85,8 @@ func TestAddNote(t *testing.T) {
 					Text: "some text",
 				},
 			},
-			setupSaver: func(adder *ucmocks.NoteSaver) {
-				adder.EXPECT().Save(mock.Anything, mock.AnythingOfType("string")).Return(appmodels.SaveResult{}, nil)
+			setupCreator: func(adder *ucmocks.NoteCreator) {
+				adder.EXPECT().Create(mock.Anything, mock.AnythingOfType("string")).Return(appmodels.SaveResult{}, nil)
 			},
 		},
 		{
@@ -97,8 +97,8 @@ func TestAddNote(t *testing.T) {
 					Caption: "some caption",
 				},
 			},
-			setupSaver: func(adder *ucmocks.NoteSaver) {
-				adder.EXPECT().Save(mock.Anything, mock.AnythingOfType("string")).Return(appmodels.SaveResult{}, nil)
+			setupCreator: func(adder *ucmocks.NoteCreator) {
+				adder.EXPECT().Create(mock.Anything, mock.AnythingOfType("string")).Return(appmodels.SaveResult{}, nil)
 			},
 		},
 		{
@@ -108,8 +108,8 @@ func TestAddNote(t *testing.T) {
 					Text: "some text",
 				},
 			},
-			setupSaver: func(adder *ucmocks.NoteSaver) {
-				adder.EXPECT().Save(mock.Anything, mock.AnythingOfType("string")).Return(appmodels.SaveResult{}, errors.New("internal adder error"))
+			setupCreator: func(adder *ucmocks.NoteCreator) {
+				adder.EXPECT().Create(mock.Anything, mock.AnythingOfType("string")).Return(appmodels.SaveResult{}, errors.New("internal adder error"))
 			},
 		},
 	}
@@ -118,15 +118,15 @@ func TestAddNote(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			saver := ucmocks.NewNoteSaver(t)
-			tc.setupSaver(saver)
+			creator := ucmocks.NewNoteCreator(t)
+			tc.setupCreator(creator)
 
 			sender := mocks.NewMessageSender(t)
 
 			sender.EXPECT().SendMessage(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 
 			logger := slog.New(log.NewDiscardHandler())
-			h := notesaving.New(logger, saver)
+			h := notesaving.New(logger, creator)
 
 			h(t.Context(), sender, tc.update)
 		})

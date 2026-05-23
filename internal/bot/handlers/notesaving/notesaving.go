@@ -57,7 +57,7 @@ type MessageSender interface {
 type Handler func(ctx context.Context, sender MessageSender, update *models.Update)
 
 // New creates a new notesaving Handler.
-func New(logger *slog.Logger, saver notesaving.NoteSaver) Handler {
+func New(logger *slog.Logger, creator notesaving.NoteCreator) Handler {
 	return func(ctx context.Context, sender MessageSender, update *models.Update) {
 		const op = "bot.handlers.add"
 		logger := logger.With(log.Op(op), log.ReqID(middleware.GetReqID(ctx)))
@@ -84,7 +84,7 @@ func New(logger *slog.Logger, saver notesaving.NoteSaver) Handler {
 			return
 		}
 
-		res, err := saver.Save(ctx, text)
+		res, err := creator.Create(ctx, text)
 		if err != nil {
 			logger.Error("error occured while saving new note", log.Err(err))
 

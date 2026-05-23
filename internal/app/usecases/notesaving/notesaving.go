@@ -11,18 +11,18 @@ import (
 	"protomorphine/tg-notes/internal/domain"
 )
 
-// NoteSaver is an interface for saving new notes.
+// NoteCreator is an interface for creating notes..
+//
+//mockery:generate: true
+type NoteCreator interface {
+	Create(ctx context.Context, text string) (models.SaveResult, error)
+}
+
+// NoteSaver is an interface for saving the note.
 //
 //mockery:generate: true
 type NoteSaver interface {
-	Save(ctx context.Context, text string) (models.SaveResult, error)
-}
-
-// NoteAdder is an interface for adding a note.
-//
-//mockery:generate: true
-type NoteAdder interface {
-	Add(ctx context.Context, note domain.Note) error
+	Save(ctx context.Context, note domain.Note) error
 }
 
 // Classifier is an interface for text classification.
@@ -35,12 +35,12 @@ type Classifier interface {
 // Usecase represents the usecase for saving notes.
 type Usecase struct {
 	classifier Classifier
-	adder      NoteAdder
+	adder      NoteSaver
 	cfg        *config.NoteSaveConfig
 }
 
 // New creates a new Usecase.
-func New(adder NoteAdder, classifier Classifier, cfg *config.NoteSaveConfig) *Usecase {
+func New(adder NoteSaver, classifier Classifier, cfg *config.NoteSaveConfig) *Usecase {
 	return &Usecase{
 		cfg:        cfg,
 		adder:      adder,
@@ -48,8 +48,8 @@ func New(adder NoteAdder, classifier Classifier, cfg *config.NoteSaveConfig) *Us
 	}
 }
 
-// Save saves a new note.
-func (u *Usecase) Save(ctx context.Context, text string) (models.SaveResult, error) {
+// Create creates a new note.
+func (u *Usecase) Create(ctx context.Context, text string) (models.SaveResult, error) {
 	const op = "app.usecase.notesaving.Save"
 
 	probs, category := u.classifier.Classify(text)
@@ -66,7 +66,7 @@ func (u *Usecase) Save(ctx context.Context, text string) (models.SaveResult, err
 		Category: category,
 	}
 
-	if err := u.adder.Add(ctx, note); err != nil {
+	if err := u.adder.Save(ctx, note); err != nil {
 		return models.SaveResult{}, fmt.Errorf("%s: error while saving note: %w", op, err)
 	}
 

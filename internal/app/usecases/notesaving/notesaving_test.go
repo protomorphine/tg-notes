@@ -23,15 +23,15 @@ func TestSave(t *testing.T) {
 	testCases := []struct {
 		name            string
 		text            string
-		setupAdder      func(m *mocks.NoteAdder)
+		setupSaver      func(m *mocks.NoteSaver)
 		setupClassifier func(m *mocks.Classifier)
 		expectedErr     error
 	}{
 		{
 			name: "success",
 			text: "test note content",
-			setupAdder: func(m *mocks.NoteAdder) {
-				m.EXPECT().Add(mock.Anything, mock.AnythingOfType("domain.Note")).Return(nil).Once()
+			setupSaver: func(m *mocks.NoteSaver) {
+				m.EXPECT().Save(mock.Anything, mock.AnythingOfType("domain.Note")).Return(nil).Once()
 			},
 			setupClassifier: func(m *mocks.Classifier) {
 				m.EXPECT().Classify(mock.AnythingOfType("string")).Return(predictions, category)
@@ -41,8 +41,8 @@ func TestSave(t *testing.T) {
 		{
 			name: "adder returns error",
 			text: "test note content",
-			setupAdder: func(m *mocks.NoteAdder) {
-				m.EXPECT().Add(mock.Anything, mock.AnythingOfType("domain.Note")).Return(errAdderMock).Once()
+			setupSaver: func(m *mocks.NoteSaver) {
+				m.EXPECT().Save(mock.Anything, mock.AnythingOfType("domain.Note")).Return(errAdderMock).Once()
 			},
 			setupClassifier: func(m *mocks.Classifier) {
 				m.EXPECT().Classify(mock.AnythingOfType("string")).Return(predictions, category)
@@ -57,14 +57,14 @@ func TestSave(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockAdder := mocks.NewNoteAdder(t)
-			tc.setupAdder(mockAdder)
+			mockSaver := mocks.NewNoteSaver(t)
+			tc.setupSaver(mockSaver)
 
 			mockClassifier := mocks.NewClassifier(t)
 			tc.setupClassifier(mockClassifier)
 
-			uc := notesaving.New(mockAdder, mockClassifier, &config.NoteSaveConfig{CategoryThreshold: .1, DefaultCategory: "default"})
-			_, err := uc.Save(t.Context(), tc.text)
+			uc := notesaving.New(mockSaver, mockClassifier, &config.NoteSaveConfig{CategoryThreshold: .1, DefaultCategory: "default"})
+			_, err := uc.Create(t.Context(), tc.text)
 
 			if tc.expectedErr != nil {
 				require.ErrorIs(t, err, tc.expectedErr)

@@ -7,7 +7,7 @@ package mocks
 import (
 	"context"
 	mock "github.com/stretchr/testify/mock"
-	"protomorphine/tg-notes/internal/app/models"
+	"protomorphine/tg-notes/internal/domain"
 )
 
 // NewNoteSaver creates a new instance of NoteSaver. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -38,29 +38,20 @@ func (_m *NoteSaver) EXPECT() *NoteSaver_Expecter {
 }
 
 // Save provides a mock function for the type NoteSaver
-func (_mock *NoteSaver) Save(ctx context.Context, text string) (models.SaveResult, error) {
-	ret := _mock.Called(ctx, text)
+func (_mock *NoteSaver) Save(ctx context.Context, note domain.Note) error {
+	ret := _mock.Called(ctx, note)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
-	var r0 models.SaveResult
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (models.SaveResult, error)); ok {
-		return returnFunc(ctx, text)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string) models.SaveResult); ok {
-		r0 = returnFunc(ctx, text)
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, domain.Note) error); ok {
+		r0 = returnFunc(ctx, note)
 	} else {
-		r0 = ret.Get(0).(models.SaveResult)
+		r0 = ret.Error(0)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = returnFunc(ctx, text)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
+	return r0
 }
 
 // NoteSaver_Save_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Save'
@@ -70,20 +61,20 @@ type NoteSaver_Save_Call struct {
 
 // Save is a helper method to define mock.On call
 //   - ctx context.Context
-//   - text string
-func (_e *NoteSaver_Expecter) Save(ctx interface{}, text interface{}) *NoteSaver_Save_Call {
-	return &NoteSaver_Save_Call{Call: _e.mock.On("Save", ctx, text)}
+//   - note domain.Note
+func (_e *NoteSaver_Expecter) Save(ctx interface{}, note interface{}) *NoteSaver_Save_Call {
+	return &NoteSaver_Save_Call{Call: _e.mock.On("Save", ctx, note)}
 }
 
-func (_c *NoteSaver_Save_Call) Run(run func(ctx context.Context, text string)) *NoteSaver_Save_Call {
+func (_c *NoteSaver_Save_Call) Run(run func(ctx context.Context, note domain.Note)) *NoteSaver_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 domain.Note
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(domain.Note)
 		}
 		run(
 			arg0,
@@ -93,12 +84,12 @@ func (_c *NoteSaver_Save_Call) Run(run func(ctx context.Context, text string)) *
 	return _c
 }
 
-func (_c *NoteSaver_Save_Call) Return(saveResult models.SaveResult, err error) *NoteSaver_Save_Call {
-	_c.Call.Return(saveResult, err)
+func (_c *NoteSaver_Save_Call) Return(err error) *NoteSaver_Save_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *NoteSaver_Save_Call) RunAndReturn(run func(ctx context.Context, text string) (models.SaveResult, error)) *NoteSaver_Save_Call {
+func (_c *NoteSaver_Save_Call) RunAndReturn(run func(ctx context.Context, note domain.Note) error) *NoteSaver_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }
