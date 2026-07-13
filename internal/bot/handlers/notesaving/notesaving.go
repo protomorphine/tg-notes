@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"context"
 	"embed"
-	"fmt"
 	"log/slog"
+	"sync"
 	"text/template"
 
 	"protomorphine/tg-notes/internal/app/usecases/notesaving"
@@ -23,28 +23,8 @@ const (
 	emptyMsgTemplate = "resources/empty_message.tmpl"
 )
 
-var (
-	//go:embed resources
-	templatesFS embed.FS
-
-	templates map[string]*template.Template
-)
-
-func init() {
-	templates = make(map[string]*template.Template)
-
-	if tmpl, err := template.ParseFS(templatesFS, successTemplate); err == nil {
-		templates[successTemplate] = tmpl
-	}
-
-	if tmpl, err := template.ParseFS(templatesFS, errorTemplate); err == nil {
-		templates[errorTemplate] = tmpl
-	}
-
-	if tmpl, err := template.ParseFS(templatesFS, emptyMsgTemplate); err == nil {
-		templates[emptyMsgTemplate] = tmpl
-	}
-}
+//go:embed resources
+var templatesFS embed.FS
 
 // MessageSender is an interface for sending messages.
 //
@@ -58,25 +38,42 @@ type Handler func(ctx context.Context, sender MessageSender, update *models.Upda
 
 // New creates a new notesaving Handler.
 func New(logger *slog.Logger, creator notesaving.NoteCreator) Handler {
+	parseTemplates := sync.OnceValue(initTemplates)
+
 	return func(ctx context.Context, sender MessageSender, update *models.Update) {
 		const op = "bot.handlers.add"
 		logger := logger.With(log.Op(op), log.ReqID(middleware.GetReqID(ctx)))
 
 		if update.Message == nil {
-			logger.Warn("nil message received")
+			logger.Warn("receive nil message")
 			return
 		}
 
 		messageID := update.Message.ID
 		chatID := update.Message.Chat.ID
 
-		text := extractNoteText(update.Message)
+		reply := func(text string) {
+			_, err := sender.SendMessage(ctx, &bot.SendMessageParams{
+				ChatID: chatID,
+				Text:   text,
+				ReplyParameters: &models.ReplyParameters{
+					MessageID: messageID,
+				},
+				ParseMode: models.ParseModeMarkdownV1,
+			})
+			if err != nil {
+				logger.Error("error occured while sending message", log.Err(err))
+			}
+		}
 
+		templates := parseTemplates()
+
+		text := extractNoteText(update.Message)
 		if text == "" {
 			logger.Warn("received message with empty text and caption")
 
-			if message, err := render(emptyMsgTemplate, struct{}{}); err == nil {
-				sendMessage(ctx, logger, sender, chatID, messageID, message)
+			if message, err := render(templates[emptyMsgTemplate], struct{}{}); err == nil {
+				reply(message)
 			} else {
 				logger.Error("error while rendering template", log.Err(err))
 			}
@@ -88,8 +85,8 @@ func New(logger *slog.Logger, creator notesaving.NoteCreator) Handler {
 		if err != nil {
 			logger.Error("error occured while saving new note", log.Err(err))
 
-			if message, err := render(errorTemplate, struct{}{}); err == nil {
-				sendMessage(ctx, logger, sender, chatID, messageID, message)
+			if message, err := render(templates[errorTemplate], struct{}{}); err == nil {
+				reply(message)
 			} else {
 				logger.Error("error while rendering template", log.Err(err))
 			}
@@ -99,32 +96,11 @@ func New(logger *slog.Logger, creator notesaving.NoteCreator) Handler {
 
 		logger.Info("new note saved")
 
-		if message, err := render(successTemplate, res); err == nil {
-			sendMessage(ctx, logger, sender, chatID, messageID, message)
+		if message, err := render(templates[successTemplate], res); err == nil {
+			reply(message)
 		} else {
 			logger.Error("error while rendering template", log.Err(err))
 		}
-	}
-}
-
-func sendMessage(
-	ctx context.Context,
-	logger *slog.Logger,
-	sender MessageSender,
-	chatID int64,
-	replyID int,
-	text string,
-) {
-	_, err := sender.SendMessage(ctx, &bot.SendMessageParams{
-		ChatID: chatID,
-		Text:   text,
-		ReplyParameters: &models.ReplyParameters{
-			MessageID: replyID,
-		},
-		ParseMode: models.ParseModeMarkdownV1,
-	})
-	if err != nil {
-		logger.Error("error occured while sending message", log.Err(err))
 	}
 }
 
@@ -138,16 +114,29 @@ func extractNoteText(message *models.Message) string {
 	return text
 }
 
-func render(templatePath string, args any) (string, error) {
-	tmpl, ok := templates[templatePath]
-	if !ok {
-		return "", fmt.Errorf("unknown template: %s", templatePath)
-	}
-
+func render(tmpl *template.Template, args any) (string, error) {
 	buf := &bytes.Buffer{}
 	if err := tmpl.Execute(buf, args); err != nil {
 		return "", err
 	}
 
 	return buf.String(), nil
+}
+
+func initTemplates() map[string]*template.Template {
+	templates := make(map[string]*template.Template)
+
+	if tmpl, err := template.ParseFS(templatesFS, successTemplate); err == nil {
+		templates[successTemplate] = tmpl
+	}
+
+	if tmpl, err := template.ParseFS(templatesFS, errorTemplate); err == nil {
+		templates[errorTemplate] = tmpl
+	}
+
+	if tmpl, err := template.ParseFS(templatesFS, emptyMsgTemplate); err == nil {
+		templates[emptyMsgTemplate] = tmpl
+	}
+
+	return templates
 }

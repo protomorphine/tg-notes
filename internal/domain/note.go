@@ -9,4 +9,3 @@ type Note struct {
 	Content  string
 	Category Category
 }
-
