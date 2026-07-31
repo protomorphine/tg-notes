@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"protomorphine/tg-notes/internal/app/nlp"
 	usecase "protomorphine/tg-notes/internal/app/usecases/notesaving"
@@ -40,7 +41,7 @@ func main() {
 
 	logger.Info("starting tg-notes app")
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 
 	storage, err := git.New(&cfg.GitRepository)
